@@ -23,14 +23,12 @@ private:
    
 	 	/* SENSORS */
 		CWheelsActuator* m_acWheels;
-    	CEpuckProximitySensor* m_seProx;
+    CEpuckProximitySensor* m_seProx;
 		CLightSensor* m_seLight;
-		CRealRedLightSensor* m_seRedLight;
 		CContactSensor* m_seContact;
 		CGroundSensor* m_seGround;
 		CGroundMemorySensor* m_seGroundMemory;
 		CBatterySensor* m_seBattery;   
-		CRedBatterySensor* m_seRedBattery; 
 
 		/* Global Variables */
 		double 		m_fLeftSpeed;
@@ -38,8 +36,7 @@ private:
 		double**	m_fActivationTable;
 		int 			m_nWriteToFile;
 		double 		m_fTime;
-    	double fBattToForageInhibitor; //TO-DO write down some other inhibitors
-		
+    double fBattToForageInhibitor;
 		/* Functions */
 
 		void ExecuteBehaviors ( void );

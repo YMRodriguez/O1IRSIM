@@ -1,5 +1,5 @@
-#ifndef IRI1EXP_H
-#define IRI1EXP_H
+#ifndef SUBSUMPTIONGARBAGEEXP_H
+#define SUBSUMPTIONGARBAGEEXP_H
 
 /******************************************************************************/
 /******************************************************************************/
@@ -9,11 +9,11 @@
 /******************************************************************************/
 /******************************************************************************/
 
-class CIri1Exp : public CExperiment
+class CSubsumptionGarbageExp : public CExperiment
 {
 public:
-    CIri1Exp ( const char* pch_name , const char* paramsFile );
-		~CIri1Exp ( void );
+    CSubsumptionGarbageExp ( const char* pch_name , const char* paramsFile );
+		~CSubsumptionGarbageExp ( void );
 protected:
     // Overwritten from the superclasses:
     CArena* CreateArena();
@@ -23,7 +23,6 @@ protected:
     void CreateAndAddEpucks(CSimulator* pc_simulator);
    	void Reset(); 
 private:
-
 		/* VARIABLES*/
 		/* Extra */
 		int m_nRobotsNumber;
@@ -33,41 +32,28 @@ private:
 		int m_nRunTime;
 
 		/* Environment */
-		int m_nLightObjectNumber;
+		int m_nNumberOfLightObject;
 		dVector2 *m_pcvLightObjects;
-		
-		int m_nBlueLightObjectNumber;
-		dVector2 *m_pcvBlueLightObjects;
-		
+
 		int m_nRedLightObjectNumber;
 		dVector2 *m_pcvRedLightObjects;
-		
+
 		int m_nNumberOfGroundArea;
 		dVector2* m_vGroundAreaCenter;
 		double* m_fGroundAreaExternalRadius;
 		double * m_fGroundAreaInternalRadius;
 		double * m_fGroundAreaColor;
 
-		/* Morphology */
-
 		/* Sensors */
 		float m_fLightSensorRange;
-		float m_fBlueLightSensorRange;
-		float m_fRedLightSensorRange;
-		
 		double m_fBatterySensorRange;
 		double m_fBatteryChargeCoef;
 		double m_fBatteryDischargeCoef;
-		
-		double m_fBlueBatterySensorRange;
-		double m_fBlueBatteryChargeCoef;
-		double m_fBlueBatteryDischargeCoef;
-		
+
 		double m_fRedBatterySensorRange;
 		double m_fRedBatteryChargeCoef;
 		double m_fRedBatteryDischargeCoef;
-		
-    double m_fEncoderSensorError;
+
 };
 
 /******************************************************************************/

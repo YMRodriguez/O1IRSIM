@@ -11,7 +11,7 @@
 /******************** Sensors ******************/
 #include "epuckproximitysensor.h"
 #include "contactsensor.h"
-#include "lightsensor.h"
+#include "reallightsensor.h"
 #include "groundsensor.h"
 #include "groundmemorysensor.h"
 #include "batterysensor.h"
@@ -20,7 +20,7 @@
 #include "wheelsactuator.h"
 
 /******************** Controller **************/
-#include "subsumptiongarbagecontroller.h"
+#include "iri1controller.h"
 
 
 /******************************************************************************/
@@ -54,7 +54,7 @@ using namespace std;
 
 /******************************************************************************/
 /******************************************************************************/
-CSubsumptionGarbageController::CSubsumptionGarbageController (const char* pch_name, CEpuck* pc_epuck, int n_write_to_file) : CController (pch_name, pc_epuck)
+CIri1Controller::CIri1Controller (const char* pch_name, CEpuck* pc_epuck, int n_write_to_file) : CController (pch_name, pc_epuck)
 
 {
 	m_nWriteToFile = n_write_to_file;
@@ -66,7 +66,7 @@ CSubsumptionGarbageController::CSubsumptionGarbageController (const char* pch_na
 	/* Set Prox Sensor */
 	m_seProx = (CEpuckProximitySensor*) m_pcEpuck->GetSensor(SENSOR_PROXIMITY);
 	/* Set light Sensor */
-	m_seLight = (CLightSensor*) m_pcEpuck->GetSensor(SENSOR_LIGHT);
+	m_seLight = (CRealLightSensor*) m_pcEpuck->GetSensor(SENSOR_REAL_LIGHT);
 	/* Set contact Sensor */
 	m_seContact = (CContactSensor*) m_pcEpuck->GetSensor (SENSOR_CONTACT);
 	/* Set ground Sensor */
@@ -77,10 +77,10 @@ CSubsumptionGarbageController::CSubsumptionGarbageController (const char* pch_na
 	m_seBattery = (CBatterySensor*) m_pcEpuck->GetSensor (SENSOR_BATTERY);
 
 	
-  fBattToForageInhibitor = 1.0;
 	/* Initilize Variables */
 	m_fLeftSpeed = 0.0;
 	m_fRightSpeed = 0.0;
+  fBattToForageInhibitor = 1.0;
 
 	m_fActivationTable = new double* [BEHAVIORS];
 	for ( int i = 0 ; i < BEHAVIORS ; i++ )
@@ -92,7 +92,7 @@ CSubsumptionGarbageController::CSubsumptionGarbageController (const char* pch_na
 /******************************************************************************/
 /******************************************************************************/
 
-CSubsumptionGarbageController::~CSubsumptionGarbageController()
+CIri1Controller::~CIri1Controller()
 {
 	for ( int i = 0 ; i < BEHAVIORS ; i++ )
 	{
@@ -104,7 +104,7 @@ CSubsumptionGarbageController::~CSubsumptionGarbageController()
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::SimulationStep(unsigned n_step_number, double f_time, double f_step_interval)
+void CIri1Controller::SimulationStep(unsigned n_step_number, double f_time, double f_step_interval)
 {
 	/* Move time to global variable, so it can be used by the bahaviors to write to files*/
 	m_fTime = f_time;
@@ -138,7 +138,7 @@ void CSubsumptionGarbageController::SimulationStep(unsigned n_step_number, doubl
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::ExecuteBehaviors ( void )
+void CIri1Controller::ExecuteBehaviors ( void )
 {
 	for ( int i = 0 ; i < BEHAVIORS ; i++ )
 	{
@@ -159,23 +159,53 @@ void CSubsumptionGarbageController::ExecuteBehaviors ( void )
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::Coordinator ( void )
+void CIri1Controller::Coordinator ( void )
 {
 	int nBehavior;
+  double fAngle = 0.0;
+
+  int nActiveBehaviors = 0;
+  
+  /* Create vector of movement */
+  dVector2  vAngle;
+  vAngle.x = 0.0;
+  vAngle.y = 0.0;
+  
+  /* For every Behavior */
 	for ( nBehavior = 0 ; nBehavior < BEHAVIORS ; nBehavior++ )
 	{
+    /* If behavior is active */
 		if ( m_fActivationTable[nBehavior][2] == 1.0 )
 		{
-			break;
+      /* DEBUG */
+      printf("Behavior %d: %2f\n", nBehavior, m_fActivationTable[nBehavior][0]);
+      /* DEBUG */
+      vAngle.x += m_fActivationTable[nBehavior][1] * cos(m_fActivationTable[nBehavior][0]);
+      vAngle.y += m_fActivationTable[nBehavior][1] * sin(m_fActivationTable[nBehavior][0]);
 		}
 	}
 
-	m_fLeftSpeed = m_fActivationTable[nBehavior][0];
-	m_fRightSpeed = m_fActivationTable[nBehavior][1];
+  /* Calc angle of movement */
+  fAngle = atan2(vAngle.y, vAngle.x);
 	
-  printf("%d %2.4f %2.4f \n", nBehavior, m_fLeftSpeed, m_fRightSpeed);
-	
-  if (m_nWriteToFile ) 
+  /* Normalize fAngle */
+  while ( fAngle > M_PI ) fAngle -= 2 * M_PI;
+	while ( fAngle < -M_PI ) fAngle += 2 * M_PI;
+ 
+  /* Based on the angle, calc wheels movements */
+  double fCLinear = 1.0;
+  double fCAngular = 1.0;
+  double fC1 = SPEED / M_PI;
+
+  /* Calc Linear Speed */
+  double fVLinear = SPEED * fCLinear * ( cos ( fAngle / 2) );
+
+  /*Calc Angular Speed */
+  double fVAngular = fAngle;
+
+  m_fLeftSpeed  = fVLinear - fC1 * fVAngular;
+  m_fRightSpeed = fVLinear + fC1 * fVAngular;
+	if (m_nWriteToFile ) 
 	{
 		/* INIT: WRITE TO FILES */
 		/* Write coordinator ouputs */
@@ -189,9 +219,8 @@ void CSubsumptionGarbageController::Coordinator ( void )
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::ObstacleAvoidance ( unsigned int un_priority )
+void CIri1Controller::ObstacleAvoidance ( unsigned int un_priority )
 {
-	
 	/* Leer Sensores de Proximidad */
 	double* prox = m_seProx->GetSensorReading(m_pcEpuck);
 
@@ -220,26 +249,16 @@ void CSubsumptionGarbageController::ObstacleAvoidance ( unsigned int un_priority
 	while ( fRepelent > M_PI ) fRepelent -= 2 * M_PI;
 	while ( fRepelent < -M_PI ) fRepelent += 2 * M_PI;
 
+  m_fActivationTable[un_priority][0] = fRepelent;
+  m_fActivationTable[un_priority][1] = fMaxProx;
+
 	/* If above a threshold */
 	if ( fMaxProx > PROXIMITY_THRESHOLD )
 	{
 		/* Set Leds to GREEN */
 		m_pcEpuck->SetAllColoredLeds(	LED_COLOR_GREEN);
-
-
-		double fCLinear = 1.0;
-		double fCAngular = 1.0;
-		double fC1 = SPEED / M_PI;
-		
-		/* Calc Linear Speed */
-		double fVLinear = SPEED * fCLinear * ( cos ( fRepelent / 2) );
-
-		/*Calc Angular Speed */
-		double fVAngular = fRepelent;
-
-		m_fActivationTable[un_priority][0] = fVLinear - fC1 * fVAngular;
-		m_fActivationTable[un_priority][1] = fVLinear + fC1 * fVAngular;
-		m_fActivationTable[un_priority][2] = 1.0;
+    /* Mark Behavior as active */
+    m_fActivationTable[un_priority][2] = 1.0;
 	}
 	
 	if (m_nWriteToFile ) 
@@ -252,38 +271,17 @@ void CSubsumptionGarbageController::ObstacleAvoidance ( unsigned int un_priority
 		fclose(fileOutput);
 		/* END WRITE TO FILE */
 	}
+	
 }
 
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::Navigate ( unsigned int un_priority )
+void CIri1Controller::Navigate ( unsigned int un_priority )
 {
-	/* Leer Sensores de Luz */
-	double* light = m_seLight->GetSensorReading(m_pcEpuck);
-	double fTotalLight = 0.0;
-	for ( int i = 0 ; i < m_seLight->GetNumberOfInputs() ; i ++ )
-	{
-		fTotalLight += light[i];
-	}
-	
-	/* DEBUG */
-	/* Leer Battery Sensores */
-	//double* battery = m_seBattery->GetSensorReading(m_pcEpuck);
-	//printf("fTotalLight: %2f -- %2f\n",fTotalLight,battery[0]);
-	/* DEBUG */
-	
-	if ( fTotalLight >= NAVIGATE_LIGHT_THRESHOLD )
-	{
-		m_fActivationTable[un_priority][0] = SPEED/4;
-		m_fActivationTable[un_priority][1] = SPEED/4;
-	}
-	else
-	{
-		m_fActivationTable[un_priority][0] = SPEED;
-		m_fActivationTable[un_priority][1] = SPEED;
-	}
-	
+  /* Direction Angle 0.0 and always active. We set its vector intensity to 0.5 if used */
+	m_fActivationTable[un_priority][0] = 0.0;
+	m_fActivationTable[un_priority][1] = 0.5;
 	m_fActivationTable[un_priority][2] = 1.0;
 
 	if (m_nWriteToFile ) 
@@ -291,7 +289,7 @@ void CSubsumptionGarbageController::Navigate ( unsigned int un_priority )
 		/* INIT: WRITE TO FILES */
 		/* Write level of competence ouputs */
 		FILE* fileOutput = fopen("outputFiles/navigateOutput", "a");
-		fprintf(fileOutput,"%2.4f %2.4f %2.4f %2.4f %2.4f\n", m_fTime, fTotalLight, m_fActivationTable[un_priority][2], m_fActivationTable[un_priority][0], m_fActivationTable[un_priority][1]);
+		fprintf(fileOutput,"%2.4f %2.4f %2.4f %2.4f \n", m_fTime, m_fActivationTable[un_priority][2], m_fActivationTable[un_priority][0], m_fActivationTable[un_priority][1]);
 		fclose(fileOutput);
 		/* END WRITE TO FILES */
 	}
@@ -301,41 +299,54 @@ void CSubsumptionGarbageController::Navigate ( unsigned int un_priority )
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::GoLoad ( unsigned int un_priority )
+void CIri1Controller::GoLoad ( unsigned int un_priority )
 {
 	/* Leer Battery Sensores */
 	double* battery = m_seBattery->GetSensorReading(m_pcEpuck);
-		
+
 	/* Leer Sensores de Luz */
 	double* light = m_seLight->GetSensorReading(m_pcEpuck);
 
+	double fMaxLight = 0.0;
+	const double* lightDirections = m_seLight->GetSensorDirections();
+
+  /* We call vRepelent to go similar to Obstacle Avoidance, although it is an aproaching vector */
+	dVector2 vRepelent;
+	vRepelent.x = 0.0;
+	vRepelent.y = 0.0;
+
+	/* Calc vector Sum */
+	for ( int i = 0 ; i < m_seProx->GetNumberOfInputs() ; i ++ )
+	{
+		vRepelent.x += light[i] * cos ( lightDirections[i] );
+		vRepelent.y += light[i] * sin ( lightDirections[i] );
+
+		if ( light[i] > fMaxLight )
+			fMaxLight = light[i];
+	}
+	
+	/* Calc pointing angle */
+	float fRepelent = atan2(vRepelent.y, vRepelent.x);
+	
+  /* Normalize angle */
+	while ( fRepelent > M_PI ) fRepelent -= 2 * M_PI;
+	while ( fRepelent < -M_PI ) fRepelent += 2 * M_PI;
+
+  m_fActivationTable[un_priority][0] = fRepelent;
+  m_fActivationTable[un_priority][1] = fMaxLight;
+
+	/* If battery below a BATTERY_THRESHOLD */
 	if ( battery[0] < BATTERY_THRESHOLD )
 	{
+    /* Inibit Forage */
+		fBattToForageInhibitor = 0.0;
 		/* Set Leds to RED */
 		m_pcEpuck->SetAllColoredLeds(	LED_COLOR_RED);
 		
+    /* Mark behavior as active */
+    m_fActivationTable[un_priority][2] = 1.0;
+	}	
 
-		fBattToForageInhibitor = 0.0;
-		/* If not pointing to the light */
-		if ( ( light[0] * light[7] == 0.0 ) )
-		{
-			m_fActivationTable[un_priority][2] = 1.0;
-
-			double lightLeft 	= light[0] + light[1] + light[2] + light[3];
-			double lightRight = light[4] + light[5] + light[6] + light[7];
-
-			if ( lightLeft > lightRight )
-			{
-				m_fActivationTable[un_priority][0] = -SPEED;
-				m_fActivationTable[un_priority][1] = SPEED;
-			}
-			else
-			{
-				m_fActivationTable[un_priority][0] = SPEED;
-				m_fActivationTable[un_priority][1] = -SPEED;
-			}
-		}
-	}
 	
 	if (m_nWriteToFile ) 
 	{
@@ -351,7 +362,7 @@ void CSubsumptionGarbageController::GoLoad ( unsigned int un_priority )
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::Forage ( unsigned int un_priority )
+void CIri1Controller::Forage ( unsigned int un_priority )
 {
 	/* Leer Sensores de Suelo Memory */
 	double* groundMemory = m_seGroundMemory->GetSensorReading(m_pcEpuck);
@@ -359,31 +370,63 @@ void CSubsumptionGarbageController::Forage ( unsigned int un_priority )
 	/* Leer Sensores de Luz */
 	double* light = m_seLight->GetSensorReading(m_pcEpuck);
 	
-	/* If with a virtual puck */
+	double fMaxLight = 0.0;
+	const double* lightDirections = m_seLight->GetSensorDirections();
+
+  /* We call vRepelent to go similar to Obstacle Avoidance, although it is an aproaching vector */
+	dVector2 vRepelent;
+	vRepelent.x = 0.0;
+	vRepelent.y = 0.0;
+
+	/* Calc vector Sum */
+	for ( int i = 0 ; i < m_seProx->GetNumberOfInputs() ; i ++ )
+	{
+		vRepelent.x += light[i] * cos ( lightDirections[i] );
+		vRepelent.y += light[i] * sin ( lightDirections[i] );
+
+		if ( light[i] > fMaxLight )
+			fMaxLight = light[i];
+	}
+	
+	/* Calc pointing angle */
+	float fRepelent = atan2(vRepelent.y, vRepelent.x);
+	/* Create repelent angle */
+	fRepelent -= M_PI;
+	
+  /* Normalize angle */
+	while ( fRepelent > M_PI ) fRepelent -= 2 * M_PI;
+	while ( fRepelent < -M_PI ) fRepelent += 2 * M_PI;
+
+  m_fActivationTable[un_priority][0] = fRepelent;
+  m_fActivationTable[un_priority][1] = 1 - fMaxLight;
+  
+  /* If with a virtual puck */
 	if ( ( groundMemory[0] * fBattToForageInhibitor ) == 1.0 )
 	{
 		/* Set Leds to BLUE */
 		m_pcEpuck->SetAllColoredLeds(	LED_COLOR_BLUE);
+    /* Mark Behavior as active */
+    m_fActivationTable[un_priority][2] = 1.0;
 		
 		/* Go oposite to the light */
-		if ( ( light[3] * light[4] == 0.0 ) )
-		{
-			m_fActivationTable[un_priority][2] = 1.0;
+		//if ( ( light[3] * light[4] == 0.0 ) )
+		//{
+			//m_fActivationTable[un_priority][2] = 1.0;
 
-			double lightLeft 	= light[0] + light[1] + light[2] + light[3];
-			double lightRight = light[4] + light[5] + light[6] + light[7];
+			//double lightLeft 	= light[0] + light[1] + light[2] + light[3];
+			//double lightRight = light[4] + light[5] + light[6] + light[7];
 
-			if ( lightLeft > lightRight )
-			{
-				m_fActivationTable[un_priority][0] = SPEED;
-				m_fActivationTable[un_priority][1] = -SPEED;
-			}
-			else
-			{
-				m_fActivationTable[un_priority][0] = -SPEED;
-				m_fActivationTable[un_priority][1] = SPEED;
-			}
-		}
+			//if ( lightLeft > lightRight )
+			//{
+				//m_fActivationTable[un_priority][0] = SPEED;
+				//m_fActivationTable[un_priority][1] = -SPEED;
+			//}
+			//else
+			//{
+				//m_fActivationTable[un_priority][0] = -SPEED;
+				//m_fActivationTable[un_priority][1] = SPEED;
+			//}
+		//}
 	}
 	if (m_nWriteToFile ) 
 	{
