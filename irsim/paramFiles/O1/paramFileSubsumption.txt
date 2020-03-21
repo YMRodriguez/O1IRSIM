@@ -16,6 +16,7 @@ RUN TIME													= 10000
 NUMBER OF LIGHT OBJECTS  						= 1
 LIGHT 1 X POSITION (meters) 				= -1.5
 LIGHT 1 Y POSITION (meters)					= -1.5
+NUMBER OF RED LIGHT OBJECTS 							= 0
 NUMBER OF GROUND AREA								= 6
 GROUND AREA 1 X POSITION	(meters)					= 1.3
 GROUND AREA 1 Y POSITION	(meters)					= 1.3
