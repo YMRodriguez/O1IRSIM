@@ -1,5 +1,5 @@
-#ifndef SUBSUMPTIONGARBAGECONTROLLER_H_
-#define SUBSUMPTIONGARBAGECONTROLLER_H_
+#ifndef IRI1CONTROLLER_H_
+#define IRI1CONTROLLER_H_
 
 /******************************************************************************/
 /******************************************************************************/
@@ -9,12 +9,12 @@
 /******************************************************************************/
 /******************************************************************************/
 
-class CSubsumptionGarbageController : public CController
+class CIri1Controller : public CController
 {
 public:
 
-    CSubsumptionGarbageController (const char* pch_name, CEpuck* pc_epuck, int n_wrtie_to_file);
-    ~CSubsumptionGarbageController();
+    CIri1Controller (const char* pch_name, CEpuck* pc_epuck, int n_wrtie_to_file);
+    ~CIri1Controller();
     void SimulationStep(unsigned n_step_number, double f_time, double f_step_interval);
 
 private:
@@ -23,14 +23,12 @@ private:
    
 	 	/* SENSORS */
 		CWheelsActuator* m_acWheels;
-    	CEpuckProximitySensor* m_seProx;
-		CLightSensor* m_seLight;
-		CRealRedLightSensor* m_seRedLight;
+    CEpuckProximitySensor* m_seProx;
+		CRealLightSensor* m_seLight;
 		CContactSensor* m_seContact;
 		CGroundSensor* m_seGround;
 		CGroundMemorySensor* m_seGroundMemory;
 		CBatterySensor* m_seBattery;   
-		CRedBatterySensor* m_seRedBattery; 
 
 		/* Global Variables */
 		double 		m_fLeftSpeed;
@@ -38,8 +36,7 @@ private:
 		double**	m_fActivationTable;
 		int 			m_nWriteToFile;
 		double 		m_fTime;
-    	double fBattToForageInhibitor; //TO-DO write down some other inhibitors
-		
+    double    fBattToForageInhibitor;
 		/* Functions */
 
 		void ExecuteBehaviors ( void );
