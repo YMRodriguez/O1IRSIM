@@ -20,13 +20,13 @@ NUMBER OF RED LIGHT OBJECTS 							= 1
 RED LIGHT 1: X POSITION										= 0.5
 RED LIGHT 1: Y POSITION										= 0.5
 NUMBER OF GROUND AREA								= 2
-GROUND AREA 1 X POSITION	(meters)					= 1.3
-GROUND AREA 1 Y POSITION	(meters)					= 1.3
+GROUND AREA 1 X POSITION	(meters)					= -1.5
+GROUND AREA 1 Y POSITION	(meters)					= -1.5
 GROUND AREA 1 RADIUS	(meters)							= 1
 GROUND AREA 1 COLOR (0.0 Black, 0.5 Grey)		= 0.0
 GROUND AREA 2 X POSITION	(meters)					= 1.5
 GROUND AREA 2 Y POSITION	(meters)					= 1.5
-GROUND AREA 2 RADIUS	(meters)							= 0.3
+GROUND AREA 2 RADIUS	(meters)							= 0.45
 GROUND AREA 2 COLOR (0.0 Black, 0.5 Grey)		= 0.5
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
