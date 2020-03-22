@@ -1,5 +1,5 @@
-#ifndef SUBSUMPTIONGARBAGEEXP_H
-#define SUBSUMPTIONGARBAGEEXP_H
+#ifndef IRI1EXP_H
+#define IRI1EXP_H
 
 /******************************************************************************/
 /******************************************************************************/
@@ -9,11 +9,11 @@
 /******************************************************************************/
 /******************************************************************************/
 
-class CSubsumptionGarbageExp : public CExperiment
+class CIri1Exp : public CExperiment
 {
 public:
-    CSubsumptionGarbageExp ( const char* pch_name , const char* paramsFile );
-		~CSubsumptionGarbageExp ( void );
+    CIri1Exp ( const char* pch_name , const char* paramsFile );
+		~CIri1Exp ( void );
 protected:
     // Overwritten from the superclasses:
     CArena* CreateArena();
@@ -46,6 +46,8 @@ private:
 
 		/* Sensors */
 		float m_fLightSensorRange;
+		float m_fRedLightSensorRange;
+		
 		double m_fBatterySensorRange;
 		double m_fBatteryChargeCoef;
 		double m_fBatteryDischargeCoef;

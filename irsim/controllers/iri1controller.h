@@ -1,5 +1,5 @@
-#ifndef SUBSUMPTIONGARBAGECONTROLLER_H_
-#define SUBSUMPTIONGARBAGECONTROLLER_H_
+#ifndef IRI1CONTROLLER_H_
+#define IRI1CONTROLLER_H_
 
 /******************************************************************************/
 /******************************************************************************/
@@ -9,17 +9,17 @@
 /******************************************************************************/
 /******************************************************************************/
 
-class CSubsumptionGarbageController : public CController
+class CIri1Controller : public CController
 {
 public:
 
-    CSubsumptionGarbageController (const char* pch_name, CEpuck* pc_epuck, int n_wrtie_to_file);
-    ~CSubsumptionGarbageController();
+    CIri1Controller (const char* pch_name, CEpuck* pc_epuck, int n_wrtie_to_file);
+    ~CIri1Controller();
     void SimulationStep(unsigned n_step_number, double f_time, double f_step_interval);
 
 private:
 		/* ROBOT */
-    CEpuck* m_pcEpuck;
+    	CEpuck* m_pcEpuck;
    
 	 	/* SENSORS */
 		CWheelsActuator* m_acWheels;
@@ -39,6 +39,7 @@ private:
 		int 			m_nWriteToFile;
 		double 		m_fTime;
     	double fBattToForageInhibitor; //TO-DO write down some other inhibitors
+		double fWashToGymInhibitor; //Added new inhibitor
 		
 		/* Functions */
 
@@ -47,7 +48,8 @@ private:
 
 		void ObstacleAvoidance ( unsigned int un_priority );
 		void Navigate ( unsigned int un_priority );
-		void GoLoad ( unsigned int un_priority );
+		void GoLoadWash ( unsigned int un_priority );
+		void GoLoadGym ( unsigned int un_priority );
 		void Forage ( unsigned int un_priority );
 };
 

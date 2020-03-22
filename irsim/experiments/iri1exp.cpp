@@ -14,44 +14,47 @@
 #include "random.h"
 #include "programmedarena.h"
 
-#include "subsumptiongarbageexp.h"
+#include "iri1exp.h"
 
 /******************** Sensors ******************/
 #include "contactsensor.h"
 #include "epuckproximitysensor.h"
+#include "reallightsensor.h"
 #include "lightsensor.h"
+#include "realredlightsensor.h"
 #include "groundsensor.h"
 #include "groundmemorysensor.h"
 #include "batterysensor.h"
+#include "redbatterysensor.h"
 
 /******************** Actuators ****************/
 #include "wheelsactuator.h"
 
 /******************** Controllers **************/
-#include "subsumptiongarbagecontroller.h"
+#include "iri1controller.h"
 
 using namespace std;
 
 /*Create Arena */
 static char* pchHeightMap = 
 "%%%%%%%%%%%%%%%%%%%%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
+"%#########%#######%%"
+"%#############%####%"
+"%#############%####%"
+"%#########%#####%##%"
+"%###############%##%"
+"%#####%%###########%"
+"%#########%########%"
+"%#########%####%%##%"
+"%##%%#############%%"
+"%#############%%###%"
+"%#####%###%####%###%"
+"%##############%###%"
+"%%#######%%####%###%"
+"%##%%##############%"
+"%######%%####%####%%"
+"%#######%##########%"
+"%##%####%%#########%"
 "%##################%"
 "%%%%%%%%%%%%%%%%%%%%";
 
@@ -71,7 +74,7 @@ static char* pchHeightMap =
 //"%##################%"
 //"%#####%%###########%"
 //"%#####%%###########%"
-//"%#####%%%%%########%"
+//"%##################%"
 //"%##################%"
 //"%##################%"
 //"%%%%%%%%%%%%%%%%%%%%";
@@ -83,7 +86,7 @@ extern long int rngSeed;
 /*******************************************************************************/
 ///*******************************************************************************/
 //
-CSubsumptionGarbageExp::CSubsumptionGarbageExp(const char* pch_name, const char* paramsFile) :
+CIri1Exp::CIri1Exp(const char* pch_name, const char* paramsFile) :
 	CExperiment(pch_name, COLLISION_MODEL_SIMPLE, COLLISION_HANDLER_POSITION)
 {
 	
@@ -155,6 +158,17 @@ CSubsumptionGarbageExp::CSubsumptionGarbageExp(const char* pch_name, const char*
 			/* Get Y Position */
 			m_pcvLightObjects[i].y = getDouble('=',pfile);
 		}
+		/* Red Lights */
+		/* Get Red Light Objects Number */
+		m_nRedLightObjectNumber = getInt('=',pfile);
+		/* Create Objects */
+		m_pcvRedLightObjects = new dVector2[m_nRedLightObjectNumber];
+		for ( int i = 0 ; i < m_nRedLightObjectNumber; i++){
+			/* Get X position */
+			m_pcvRedLightObjects[i].x = getDouble('=',pfile);
+			/* Get Y Position */
+			m_pcvRedLightObjects[i].y = getDouble('=',pfile);
+		}
 
 		/* Ground Areas */
 		/* Get GroundArea Objects */
@@ -179,6 +193,9 @@ CSubsumptionGarbageExp::CSubsumptionGarbageExp(const char* pch_name, const char*
 
 		m_fLightSensorRange = getDouble('=',pfile); 
 		
+		/* Get Red Light Range */
+		m_fRedLightSensorRange = getDouble('=',pfile);
+		
 		/* Get Battery load range */
 		m_fBatterySensorRange = getDouble('=',pfile);
 		/* Get batttery charge coef */
@@ -186,15 +203,23 @@ CSubsumptionGarbageExp::CSubsumptionGarbageExp(const char* pch_name, const char*
 		/* Get batttery charge coef */
 		m_fBatteryDischargeCoef = getDouble('=',pfile);
 
+		/* Get Red Battery load range */
+		m_fRedBatterySensorRange = getDouble('=',pfile);
+		/* Get Red batttery charge coef */
+		m_fRedBatteryChargeCoef = getDouble('=',pfile);
+		/* Get Red batttery charge coef */
+		m_fRedBatteryDischargeCoef = getDouble('=',pfile);
+
 	}
 }
 
 /******************************************************************************/
 /******************************************************************************/
 
-CSubsumptionGarbageExp::~CSubsumptionGarbageExp ( void )
+CIri1Exp::~CIri1Exp ( void )
 {
 	delete [] m_pcvLightObjects;
+	delete [] m_pcvRedLightObjects;
 	delete [] m_vGroundAreaCenter;
 	delete [] m_fGroundAreaExternalRadius;
 	delete [] m_fGroundAreaInternalRadius;
@@ -203,7 +228,7 @@ CSubsumptionGarbageExp::~CSubsumptionGarbageExp ( void )
 
 	/******************************************************************************/
 /******************************************************************************/
-CArena* CSubsumptionGarbageExp::CreateArena()
+CArena* CIri1Exp::CreateArena()
 {
 	/* Create Arena */
 	CArena* pcArena = NULL;
@@ -218,6 +243,15 @@ CArena* CSubsumptionGarbageExp::CreateArena()
 		CLightObject* pcLightObject = new CLightObject (pchTemp);
 		pcLightObject->SetCenter(m_pcvLightObjects[i]);
 		pcArena->AddLightObject(pcLightObject);
+	}
+
+	/* Create and add Red Light Object */
+	CRedLightObject* pcRedLightObject = NULL;
+	for( int i = 0 ; i < m_nRedLightObjectNumber ; i++){
+		sprintf(pchTemp, "RedLightObject%d", i);
+		CRedLightObject* pcRedLightObject = new CRedLightObject (pchTemp);
+		pcRedLightObject->SetCenter(m_pcvRedLightObjects[i]);
+		pcArena->AddRedLightObject(pcRedLightObject);
 	}
 
 	/* Create GroundArea */
@@ -243,7 +277,7 @@ CArena* CSubsumptionGarbageExp::CreateArena()
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageExp::AddActuators(CEpuck* pc_epuck)
+void CIri1Exp::AddActuators(CEpuck* pc_epuck)
 {
 	/* Create and Add Wheels */
 	char pchTemp[128];
@@ -256,7 +290,7 @@ void CSubsumptionGarbageExp::AddActuators(CEpuck* pc_epuck)
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageExp::AddSensors(CEpuck* pc_epuck)
+void CIri1Exp::AddSensors(CEpuck* pc_epuck)
 {
 	//
 	/* Create and add Proximity Sensor */
@@ -268,6 +302,11 @@ void CSubsumptionGarbageExp::AddSensors(CEpuck* pc_epuck)
 	CSensor* pcLightSensor = NULL;
 	pcLightSensor = new CLightSensor("Light Sensor", m_fLightSensorRange);
 	pc_epuck->AddSensor(pcLightSensor);
+
+	//Red Light Sensor
+	CSensor* pcRedLightSensor = NULL;
+	pcRedLightSensor = new CRealRedLightSensor("Red Light Sensor", m_fRedLightSensorRange);
+	pc_epuck->AddSensor(pcRedLightSensor);
 	
 	//Contact Sensor
 	CSensor* pcContactSensor = NULL;
@@ -288,17 +327,22 @@ void CSubsumptionGarbageExp::AddSensors(CEpuck* pc_epuck)
 	CSensor* pcBatterySensor = NULL;
 	pcBatterySensor = new CBatterySensor("Battery Sensor", m_fBatterySensorRange, m_fBatteryChargeCoef, m_fBatteryDischargeCoef);
 	pc_epuck->AddSensor(pcBatterySensor);
+
+	//Red Battery Sensor
+	CSensor* pcRedBatterySensor = NULL;
+	pcRedBatterySensor = new CRedBatterySensor("Battery Sensor", m_fRedBatterySensorRange, m_fRedBatteryChargeCoef, m_fRedBatteryDischargeCoef);
+	pc_epuck->AddSensor(pcRedBatterySensor);
 }
 
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageExp::SetController(CEpuck* pc_epuck)
+void CIri1Exp::SetController(CEpuck* pc_epuck)
 {
 	char pchTemp[128];
 	sprintf(pchTemp, "Iri1");
-	CController* pcController = new CSubsumptionGarbageController(pchTemp, pc_epuck, m_nWriteToFile);
-	pc_epuck->SetControllerType( CONTROLLER_SUBSUMPTION_GARBAGE );
+	CController* pcController = new CIri1Controller(pchTemp, pc_epuck, m_nWriteToFile);
+	pc_epuck->SetControllerType( CONTROLLER_IRI1 );
 	pc_epuck->SetController(pcController);
 
 }
@@ -306,7 +350,7 @@ void CSubsumptionGarbageExp::SetController(CEpuck* pc_epuck)
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageExp::CreateAndAddEpucks(CSimulator* pc_simulator)
+void CIri1Exp::CreateAndAddEpucks(CSimulator* pc_simulator)
 {
 	/* Create and add epucks */
 	char label[100] = "epuck";    
@@ -325,6 +369,6 @@ void CSubsumptionGarbageExp::CreateAndAddEpucks(CSimulator* pc_simulator)
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageExp::Reset ( void )
+void CIri1Exp::Reset ( void )
 {
 }

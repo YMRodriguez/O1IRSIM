@@ -12,15 +12,18 @@
 #include "epuckproximitysensor.h"
 #include "contactsensor.h"
 #include "lightsensor.h"
+#include "reallightsensor.h"
+#include "realredlightsensor.h"
 #include "groundsensor.h"
 #include "groundmemorysensor.h"
 #include "batterysensor.h"
+#include "redbatterysensor.h"
 
 /******************** Actuators ****************/
 #include "wheelsactuator.h"
 
 /******************** Controller **************/
-#include "subsumptiongarbagecontroller.h"
+#include "iri1controller.h"
 
 
 /******************************************************************************/
@@ -35,17 +38,19 @@ using namespace std;
 /******************************************************************************/
 /******************************************************************************/
 
-#define BEHAVIORS	4
+#define BEHAVIORS	5
 
 #define AVOID_PRIORITY 		0
-#define RELOAD_PRIORITY 	1
-#define FORAGE_PRIORITY		2
-#define NAVIGATE_PRIORITY 3
+#define FORAGE_PRIORITY		1
+#define RELOAD_PRIORITY_GYM 	3 // Changed from reloading to just a navigation
+#define RELOAD_PRIORITY_WASH 	2
+#define NAVIGATE_PRIORITY 4
 
 /* Threshold to avoid obstacles */
-#define PROXIMITY_THRESHOLD 0.3
+#define PROXIMITY_THRESHOLD 0.1
 /* Threshold to define the battery discharged */
-#define BATTERY_THRESHOLD 0.5
+#define BATTERY_GYM_THRESHOLD 0.5
+#define BATTERY_WASH_THRESHOLD 0.1
 /* Threshold to reduce the speed of the robot */
 #define NAVIGATE_LIGHT_THRESHOLD 0.9
 
@@ -54,7 +59,7 @@ using namespace std;
 
 /******************************************************************************/
 /******************************************************************************/
-CSubsumptionGarbageController::CSubsumptionGarbageController (const char* pch_name, CEpuck* pc_epuck, int n_write_to_file) : CController (pch_name, pc_epuck)
+CIri1Controller::CIri1Controller (const char* pch_name, CEpuck* pc_epuck, int n_write_to_file) : CController (pch_name, pc_epuck)
 
 {
 	m_nWriteToFile = n_write_to_file;
@@ -67,6 +72,8 @@ CSubsumptionGarbageController::CSubsumptionGarbageController (const char* pch_na
 	m_seProx = (CEpuckProximitySensor*) m_pcEpuck->GetSensor(SENSOR_PROXIMITY);
 	/* Set light Sensor */
 	m_seLight = (CLightSensor*) m_pcEpuck->GetSensor(SENSOR_LIGHT);
+	/* Set Red light Sensor */
+	m_seRedLight = (CRealRedLightSensor*) m_pcEpuck->GetSensor(SENSOR_REAL_RED_LIGHT);
 	/* Set contact Sensor */
 	m_seContact = (CContactSensor*) m_pcEpuck->GetSensor (SENSOR_CONTACT);
 	/* Set ground Sensor */
@@ -75,9 +82,11 @@ CSubsumptionGarbageController::CSubsumptionGarbageController (const char* pch_na
 	m_seGroundMemory = (CGroundMemorySensor*) m_pcEpuck->GetSensor (SENSOR_GROUND_MEMORY);
 	/* Set battery Sensor */
 	m_seBattery = (CBatterySensor*) m_pcEpuck->GetSensor (SENSOR_BATTERY);
+	/* Set red battery Sensor */
+	m_seRedBattery = (CRedBatterySensor*) m_pcEpuck->GetSensor (SENSOR_RED_BATTERY);
 
 	
-  fBattToForageInhibitor = 1.0;
+  fForageToWashInhibitor = 1.0;
 	/* Initilize Variables */
 	m_fLeftSpeed = 0.0;
 	m_fRightSpeed = 0.0;
@@ -85,14 +94,14 @@ CSubsumptionGarbageController::CSubsumptionGarbageController (const char* pch_na
 	m_fActivationTable = new double* [BEHAVIORS];
 	for ( int i = 0 ; i < BEHAVIORS ; i++ )
 	{
-		m_fActivationTable[i] = new double[3];
+		m_fActivationTable[i] = new double[4];
 	}
 }
 
 /******************************************************************************/
 /******************************************************************************/
 
-CSubsumptionGarbageController::~CSubsumptionGarbageController()
+CIri1Controller::~CIri1Controller()
 {
 	for ( int i = 0 ; i < BEHAVIORS ; i++ )
 	{
@@ -104,7 +113,7 @@ CSubsumptionGarbageController::~CSubsumptionGarbageController()
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::SimulationStep(unsigned n_step_number, double f_time, double f_step_interval)
+void CIri1Controller::SimulationStep(unsigned n_step_number, double f_time, double f_step_interval)
 {
 	/* Move time to global variable, so it can be used by the bahaviors to write to files*/
 	m_fTime = f_time;
@@ -138,7 +147,7 @@ void CSubsumptionGarbageController::SimulationStep(unsigned n_step_number, doubl
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::ExecuteBehaviors ( void )
+void CIri1Controller::ExecuteBehaviors ( void )
 {
 	for ( int i = 0 ; i < BEHAVIORS ; i++ )
 	{
@@ -148,10 +157,11 @@ void CSubsumptionGarbageController::ExecuteBehaviors ( void )
 	/* Release Inhibitors */
 	fBattToForageInhibitor = 1.0;
 	/* Set Leds to BLACK */
-	m_pcEpuck->SetAllColoredLeds(	LED_COLOR_BLACK);
+	m_pcEpuck->SetAllColoredLeds(	LED_COLOR_BLUE);
 	
 	ObstacleAvoidance ( AVOID_PRIORITY );
-	GoLoad ( RELOAD_PRIORITY );
+	GoLoadGym ( RELOAD_PRIORITY_GYM );
+	GoLoadWash ( RELOAD_PRIORITY_WASH);
 	Forage ( FORAGE_PRIORITY );
 	Navigate ( NAVIGATE_PRIORITY );
 }
@@ -159,7 +169,7 @@ void CSubsumptionGarbageController::ExecuteBehaviors ( void )
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::Coordinator ( void )
+void CIri1Controller::Coordinator ( void )
 {
 	int nBehavior;
 	for ( nBehavior = 0 ; nBehavior < BEHAVIORS ; nBehavior++ )
@@ -189,7 +199,7 @@ void CSubsumptionGarbageController::Coordinator ( void )
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::ObstacleAvoidance ( unsigned int un_priority )
+void CIri1Controller::ObstacleAvoidance ( unsigned int un_priority )
 {
 	
 	/* Leer Sensores de Proximidad */
@@ -257,14 +267,14 @@ void CSubsumptionGarbageController::ObstacleAvoidance ( unsigned int un_priority
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::Navigate ( unsigned int un_priority )
+void CIri1Controller::Navigate ( unsigned int un_priority )
 {
 	/* Leer Sensores de Luz */
-	double* light = m_seLight->GetSensorReading(m_pcEpuck);
-	double fTotalLight = 0.0;
-	for ( int i = 0 ; i < m_seLight->GetNumberOfInputs() ; i ++ )
+	double* light = m_seRedLight->GetSensorReading(m_pcEpuck);
+	double fTotalRedLight = 0.0; //Red light will be the reference
+	for ( int i = 0 ; i < m_seRedLight->GetNumberOfInputs() ; i ++ )
 	{
-		fTotalLight += light[i];
+		fTotalRedLight += light[i];
 	}
 	
 	/* DEBUG */
@@ -273,7 +283,7 @@ void CSubsumptionGarbageController::Navigate ( unsigned int un_priority )
 	//printf("fTotalLight: %2f -- %2f\n",fTotalLight,battery[0]);
 	/* DEBUG */
 	
-	if ( fTotalLight >= NAVIGATE_LIGHT_THRESHOLD )
+	if ( fTotalRedLight >= NAVIGATE_LIGHT_THRESHOLD )
 	{
 		m_fActivationTable[un_priority][0] = SPEED/4;
 		m_fActivationTable[un_priority][1] = SPEED/4;
@@ -291,7 +301,7 @@ void CSubsumptionGarbageController::Navigate ( unsigned int un_priority )
 		/* INIT: WRITE TO FILES */
 		/* Write level of competence ouputs */
 		FILE* fileOutput = fopen("outputFiles/navigateOutput", "a");
-		fprintf(fileOutput,"%2.4f %2.4f %2.4f %2.4f %2.4f\n", m_fTime, fTotalLight, m_fActivationTable[un_priority][2], m_fActivationTable[un_priority][0], m_fActivationTable[un_priority][1]);
+		fprintf(fileOutput,"%2.4f %2.4f %2.4f %2.4f %2.4f\n", m_fTime, fTotalRedLight, m_fActivationTable[un_priority][2], m_fActivationTable[un_priority][0], m_fActivationTable[un_priority][1]);
 		fclose(fileOutput);
 		/* END WRITE TO FILES */
 	}
@@ -301,15 +311,15 @@ void CSubsumptionGarbageController::Navigate ( unsigned int un_priority )
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::GoLoad ( unsigned int un_priority )
+void CIri1Controller::GoLoadWash ( unsigned int un_priority )
 {
 	/* Leer Battery Sensores */
-	double* battery = m_seBattery->GetSensorReading(m_pcEpuck);
+	double* battery = m_seRedBattery->GetSensorReading(m_pcEpuck);
 		
 	/* Leer Sensores de Luz */
-	double* light = m_seLight->GetSensorReading(m_pcEpuck);
+	double* light = m_seRedLight->GetSensorReading(m_pcEpuck);
 
-	if ( battery[0] < BATTERY_THRESHOLD )
+	if ( battery[0] < BATTERY_WASH_THRESHOLD )
 	{
 		/* Set Leds to RED */
 		m_pcEpuck->SetAllColoredLeds(	LED_COLOR_RED);
@@ -348,10 +358,57 @@ void CSubsumptionGarbageController::GoLoad ( unsigned int un_priority )
 	}
 }
 
+void CIri1Controller::GoLoadGym ( unsigned int un_priority )
+{
+	/* Leer Battery Sensores */
+	double* battery = m_seBattery->GetSensorReading(m_pcEpuck);
+		
+	/* Leer Sensores de Luz */
+	double* light = m_seLight->GetSensorReading(m_pcEpuck);
+
+	if ( battery[0] < BATTERY_GYM_THRESHOLD )
+	{
+		/* Set Leds to RED */
+		m_pcEpuck->SetAllColoredLeds(	LED_COLOR_RED);
+		
+
+		fWashToGymInhibitor = 0.0;
+		/* If not pointing to the light */
+		if ( ( light[0] * light[7] == 0.0 ) )
+		{
+			m_fActivationTable[un_priority][2] = 1.0;
+
+			double lightLeft 	= light[0] + light[1] + light[2] + light[3];
+			double lightRight = light[4] + light[5] + light[6] + light[7];
+
+			if ( lightLeft > lightRight )
+			{
+				m_fActivationTable[un_priority][0] = -SPEED;
+				m_fActivationTable[un_priority][1] = SPEED;
+			}
+			else
+			{
+				m_fActivationTable[un_priority][0] = SPEED;
+				m_fActivationTable[un_priority][1] = -SPEED;
+			}
+		}
+	}
+	
+	if (m_nWriteToFile ) 
+	{
+		/* INIT WRITE TO FILE */
+		FILE* fileOutput = fopen("outputFiles/batteryOutput", "a");
+		fprintf(fileOutput, "%2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f ", m_fTime, battery[0], light[0], light[1], light[2], light[3], light[4], light[5], light[6], light[7]);
+		fprintf(fileOutput, "%2.4f %2.4f %2.4f\n",m_fActivationTable[un_priority][2], m_fActivationTable[un_priority][0], m_fActivationTable[un_priority][1]);
+		fclose(fileOutput);
+		/* END WRITE TO FILE */
+	}
+}
+
 /******************************************************************************/
 /******************************************************************************/
 
-void CSubsumptionGarbageController::Forage ( unsigned int un_priority )
+void CIri1Controller::Forage ( unsigned int un_priority )
 {
 	/* Leer Sensores de Suelo Memory */
 	double* groundMemory = m_seGroundMemory->GetSensorReading(m_pcEpuck);
