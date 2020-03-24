@@ -48,7 +48,7 @@ using namespace std;
 #define NAVIGATE_PRIORITY 4
 
 /* Threshold to avoid obstacles */
-#define PROXIMITY_THRESHOLD 0.8
+#define PROXIMITY_THRESHOLD 0.7
 /* Threshold to define the battery discharged */
 #define BATTERY_WASH_THRESHOLD 0.5
 /* Threshold to reduce the speed of the robot */
@@ -56,7 +56,7 @@ using namespace std;
 #define NAVIGATE_THRESHOLD 0.5
 
 
-#define SPEED 500
+#define SPEED 1000
 
 
 /******************************************************************************/
@@ -161,8 +161,10 @@ void CIri1Controller::ExecuteBehaviors ( void )
 
 	/* Release Inhibitors */
 	fForageToWashInhibitor = 1.0;
+	fWashToGymInhibitor = 1.0;
+
 	/* Set Leds to BLACK */
-	m_pcEpuck->SetAllColoredLeds(	LED_COLOR_BLUE);
+	m_pcEpuck->SetAllColoredLeds(LED_COLOR_YELLOW);
 	
 	ObstacleAvoidance ( AVOID_PRIORITY );
 	GoLoadWash ( RELOAD_PRIORITY_WASH);
@@ -239,7 +241,7 @@ void CIri1Controller::ObstacleAvoidance ( unsigned int un_priority )
 	if ( fMaxProx > PROXIMITY_THRESHOLD )
 	{
 		/* Set Leds to GREEN */
-		m_pcEpuck->SetAllColoredLeds(	LED_COLOR_GREEN);
+		m_pcEpuck->SetAllColoredLeds(LED_COLOR_GREEN);
 
 
 		double fCLinear = 1.0;
@@ -284,8 +286,7 @@ void CIri1Controller::Navigate ( unsigned int un_priority )
 	
 	/* DEBUG */
 	/* Leer Battery Sensores */
-	//double* battery = m_seBattery->GetSensorReading(m_pcEpuck);
-	//printf("fTotalLight: %2f -- %2f\n",fTotalLight,battery[0]);
+	printf("fTotalBlueLight: %2f\n",fTotalBlueLight);
 	/* DEBUG */
 	
 	if ( fTotalBlueLight >= NAVIGATE_THRESHOLD )
@@ -333,15 +334,15 @@ void CIri1Controller::NavigateGym ( unsigned int un_priority )
 	printf("fTotalLight: %2f\n",fTotalLight);
 	/* DEBUG */
 	
-	if ( tmp[0] > NAVIGATE_GYM_THRESHOLD )
+	if ( tmp[0]*fWashToGymInhibitor > NAVIGATE_GYM_THRESHOLD )
 	{
 		tmp[0] = 2 * NAVIGATE_GYM_THRESHOLD - tmp[0];
-		m_fActivationTable[un_priority][1] =	0.65 + (tmp[0]);
+		m_fActivationTable[un_priority][0] =	SPEED*(0.65 + tmp[0]);
 		//m_fActivationTable[un_priority][0] = SPEED/4;
 		//m_fActivationTable[un_priority][1] = SPEED/4;
-	}else if(tmp[1] > NAVIGATE_GYM_THRESHOLD){
+	}else if(tmp[1]*fWashToGymInhibitor > NAVIGATE_GYM_THRESHOLD){
 		tmp[1] = 2 * NAVIGATE_GYM_THRESHOLD - tmp[1];
-		m_fActivationTable[un_priority][0] =  0.6 + (tmp[1]);
+		m_fActivationTable[un_priority][1] =  SPEED*(0.6 + tmp[1]);
 	}
 	else
 	{
@@ -381,7 +382,7 @@ void CIri1Controller::GoLoadWash ( unsigned int un_priority )
 	printf("Red Battery: %2f\n",battery[0]);
 	/* DEBUG */
 
-	if ( battery[0] * fForageToWashInhibitor < BATTERY_WASH_THRESHOLD )
+	if ( battery[0]  < BATTERY_WASH_THRESHOLD * fForageToWashInhibitor )
 	{
 		/* Set Leds to RED */
 		m_pcEpuck->SetAllColoredLeds(LED_COLOR_RED);
