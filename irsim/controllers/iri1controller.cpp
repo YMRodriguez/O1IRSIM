@@ -14,6 +14,7 @@
 #include "lightsensor.h"
 #include "reallightsensor.h"
 #include "realredlightsensor.h"
+#include "realbluelightsensor.h"
 #include "groundsensor.h"
 #include "groundmemorysensor.h"
 #include "batterysensor.h"
@@ -42,17 +43,18 @@ using namespace std;
 
 #define AVOID_PRIORITY 		0
 #define FORAGE_PRIORITY		1
-#define RELOAD_PRIORITY_GYM 	3 // Changed from reloading to just a navigation
 #define RELOAD_PRIORITY_WASH 	2
+#define NAVIGATE_PRIORITY_GYM 	3 // Changed from reloading to just a navigation
 #define NAVIGATE_PRIORITY 4
 
 /* Threshold to avoid obstacles */
-#define PROXIMITY_THRESHOLD 0.1
+#define PROXIMITY_THRESHOLD 0.8
 /* Threshold to define the battery discharged */
-#define BATTERY_GYM_THRESHOLD 0.5
-#define BATTERY_WASH_THRESHOLD 0.1
+#define BATTERY_WASH_THRESHOLD 0.5
 /* Threshold to reduce the speed of the robot */
-#define NAVIGATE_LIGHT_THRESHOLD 0.9
+#define NAVIGATE_GYM_THRESHOLD 0.2
+#define NAVIGATE_THRESHOLD 0.5
+
 
 #define SPEED 500
 
@@ -74,6 +76,8 @@ CIri1Controller::CIri1Controller (const char* pch_name, CEpuck* pc_epuck, int n_
 	m_seLight = (CLightSensor*) m_pcEpuck->GetSensor(SENSOR_LIGHT);
 	/* Set Red light Sensor */
 	m_seRedLight = (CRealRedLightSensor*) m_pcEpuck->GetSensor(SENSOR_REAL_RED_LIGHT);
+	/* Set Blue light Sensor */
+	m_seBlueLight = (CRealBlueLightSensor*) m_pcEpuck->GetSensor(SENSOR_REAL_BLUE_LIGHT);
 	/* Set contact Sensor */
 	m_seContact = (CContactSensor*) m_pcEpuck->GetSensor (SENSOR_CONTACT);
 	/* Set ground Sensor */
@@ -87,6 +91,7 @@ CIri1Controller::CIri1Controller (const char* pch_name, CEpuck* pc_epuck, int n_
 
 	
   fForageToWashInhibitor = 1.0;
+  fWashToGymInhibitor = 1.0;
 	/* Initilize Variables */
 	m_fLeftSpeed = 0.0;
 	m_fRightSpeed = 0.0;
@@ -155,14 +160,14 @@ void CIri1Controller::ExecuteBehaviors ( void )
 	}
 
 	/* Release Inhibitors */
-	fBattToForageInhibitor = 1.0;
+	fForageToWashInhibitor = 1.0;
 	/* Set Leds to BLACK */
 	m_pcEpuck->SetAllColoredLeds(	LED_COLOR_BLUE);
 	
 	ObstacleAvoidance ( AVOID_PRIORITY );
-	GoLoadGym ( RELOAD_PRIORITY_GYM );
 	GoLoadWash ( RELOAD_PRIORITY_WASH);
 	Forage ( FORAGE_PRIORITY );
+	NavigateGym ( NAVIGATE_PRIORITY_GYM);
 	Navigate ( NAVIGATE_PRIORITY );
 }
 
@@ -270,11 +275,11 @@ void CIri1Controller::ObstacleAvoidance ( unsigned int un_priority )
 void CIri1Controller::Navigate ( unsigned int un_priority )
 {
 	/* Leer Sensores de Luz */
-	double* light = m_seRedLight->GetSensorReading(m_pcEpuck);
-	double fTotalRedLight = 0.0; //Red light will be the reference
-	for ( int i = 0 ; i < m_seRedLight->GetNumberOfInputs() ; i ++ )
+	double* light = m_seBlueLight->GetSensorReading(m_pcEpuck);
+	double fTotalBlueLight = 0.0; //Red light will be the reference
+	for ( int i = 0 ; i < m_seBlueLight->GetNumberOfInputs() ; i ++ )
 	{
-		fTotalRedLight += light[i];
+		fTotalBlueLight += light[i];
 	}
 	
 	/* DEBUG */
@@ -283,7 +288,7 @@ void CIri1Controller::Navigate ( unsigned int un_priority )
 	//printf("fTotalLight: %2f -- %2f\n",fTotalLight,battery[0]);
 	/* DEBUG */
 	
-	if ( fTotalRedLight >= NAVIGATE_LIGHT_THRESHOLD )
+	if ( fTotalBlueLight >= NAVIGATE_THRESHOLD )
 	{
 		m_fActivationTable[un_priority][0] = SPEED/4;
 		m_fActivationTable[un_priority][1] = SPEED/4;
@@ -301,7 +306,57 @@ void CIri1Controller::Navigate ( unsigned int un_priority )
 		/* INIT: WRITE TO FILES */
 		/* Write level of competence ouputs */
 		FILE* fileOutput = fopen("outputFiles/navigateOutput", "a");
-		fprintf(fileOutput,"%2.4f %2.4f %2.4f %2.4f %2.4f\n", m_fTime, fTotalRedLight, m_fActivationTable[un_priority][2], m_fActivationTable[un_priority][0], m_fActivationTable[un_priority][1]);
+		fprintf(fileOutput,"%2.4f %2.4f %2.4f %2.4f %2.4f\n", m_fTime, fTotalBlueLight, m_fActivationTable[un_priority][2], m_fActivationTable[un_priority][0], m_fActivationTable[un_priority][1]);
+		fclose(fileOutput);
+		/* END WRITE TO FILES */
+	}
+
+}
+
+void CIri1Controller::NavigateGym ( unsigned int un_priority )
+{
+	/* Leer Sensores de Luz */
+	double* light = m_seLight->GetSensorReading(m_pcEpuck);
+	double fTotalLight = 0.0; 
+	double tmp[2];
+
+	for ( int i = 0 ; i < m_seLight->GetNumberOfInputs() ; i ++ )
+	{
+		tmp[0] = light[0] + light[1] + light[2] + light[3];
+ 		tmp[1] = light[7] + light[6] + light[5] + light[4];
+
+		fTotalLight += light[i];
+	}
+	
+	/* DEBUG */
+	/* Leer Battery Sensores */
+	printf("fTotalLight: %2f\n",fTotalLight);
+	/* DEBUG */
+	
+	if ( tmp[0] > NAVIGATE_GYM_THRESHOLD )
+	{
+		tmp[0] = 2 * NAVIGATE_GYM_THRESHOLD - tmp[0];
+		m_fActivationTable[un_priority][1] =	0.65 + (tmp[0]);
+		//m_fActivationTable[un_priority][0] = SPEED/4;
+		//m_fActivationTable[un_priority][1] = SPEED/4;
+	}else if(tmp[1] > NAVIGATE_GYM_THRESHOLD){
+		tmp[1] = 2 * NAVIGATE_GYM_THRESHOLD - tmp[1];
+		m_fActivationTable[un_priority][0] =  0.6 + (tmp[1]);
+	}
+	else
+	{
+		m_fActivationTable[un_priority][0] = SPEED;
+		m_fActivationTable[un_priority][1] = SPEED;
+	}
+	
+	m_fActivationTable[un_priority][2] = 1.0;
+
+	if (m_nWriteToFile ) 
+	{
+		/* INIT: WRITE TO FILES */
+		/* Write level of competence ouputs */
+		FILE* fileOutput = fopen("outputFiles/navigateGymOutput", "a");
+		fprintf(fileOutput,"%2.4f %2.4f %2.4f %2.4f %2.4f\n", m_fTime, fTotalLight, m_fActivationTable[un_priority][2], m_fActivationTable[un_priority][0], m_fActivationTable[un_priority][1]);
 		fclose(fileOutput);
 		/* END WRITE TO FILES */
 	}
@@ -319,13 +374,20 @@ void CIri1Controller::GoLoadWash ( unsigned int un_priority )
 	/* Leer Sensores de Luz */
 	double* light = m_seRedLight->GetSensorReading(m_pcEpuck);
 
-	if ( battery[0] < BATTERY_WASH_THRESHOLD )
+	/* DEBUG */
+
+	/* Leer Red Battery Sensores de Suelo Memory */
+	double* redbattery = m_seRedBattery->GetSensorReading(m_pcEpuck);
+	printf("Red Battery: %2f\n",battery[0]);
+	/* DEBUG */
+
+	if ( battery[0] * fForageToWashInhibitor < BATTERY_WASH_THRESHOLD )
 	{
 		/* Set Leds to RED */
-		m_pcEpuck->SetAllColoredLeds(	LED_COLOR_RED);
+		m_pcEpuck->SetAllColoredLeds(LED_COLOR_RED);
 		
 
-		fBattToForageInhibitor = 0.0;
+		fWashToGymInhibitor = 0.0; 
 		/* If not pointing to the light */
 		if ( ( light[0] * light[7] == 0.0 ) )
 		{
@@ -350,54 +412,7 @@ void CIri1Controller::GoLoadWash ( unsigned int un_priority )
 	if (m_nWriteToFile ) 
 	{
 		/* INIT WRITE TO FILE */
-		FILE* fileOutput = fopen("outputFiles/batteryOutput", "a");
-		fprintf(fileOutput, "%2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f ", m_fTime, battery[0], light[0], light[1], light[2], light[3], light[4], light[5], light[6], light[7]);
-		fprintf(fileOutput, "%2.4f %2.4f %2.4f\n",m_fActivationTable[un_priority][2], m_fActivationTable[un_priority][0], m_fActivationTable[un_priority][1]);
-		fclose(fileOutput);
-		/* END WRITE TO FILE */
-	}
-}
-
-void CIri1Controller::GoLoadGym ( unsigned int un_priority )
-{
-	/* Leer Battery Sensores */
-	double* battery = m_seBattery->GetSensorReading(m_pcEpuck);
-		
-	/* Leer Sensores de Luz */
-	double* light = m_seLight->GetSensorReading(m_pcEpuck);
-
-	if ( battery[0] < BATTERY_GYM_THRESHOLD )
-	{
-		/* Set Leds to RED */
-		m_pcEpuck->SetAllColoredLeds(	LED_COLOR_RED);
-		
-
-		fWashToGymInhibitor = 0.0;
-		/* If not pointing to the light */
-		if ( ( light[0] * light[7] == 0.0 ) )
-		{
-			m_fActivationTable[un_priority][2] = 1.0;
-
-			double lightLeft 	= light[0] + light[1] + light[2] + light[3];
-			double lightRight = light[4] + light[5] + light[6] + light[7];
-
-			if ( lightLeft > lightRight )
-			{
-				m_fActivationTable[un_priority][0] = -SPEED;
-				m_fActivationTable[un_priority][1] = SPEED;
-			}
-			else
-			{
-				m_fActivationTable[un_priority][0] = SPEED;
-				m_fActivationTable[un_priority][1] = -SPEED;
-			}
-		}
-	}
-	
-	if (m_nWriteToFile ) 
-	{
-		/* INIT WRITE TO FILE */
-		FILE* fileOutput = fopen("outputFiles/batteryOutput", "a");
+		FILE* fileOutput = fopen("outputFiles/redbatteryOutput", "a");
 		fprintf(fileOutput, "%2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f ", m_fTime, battery[0], light[0], light[1], light[2], light[3], light[4], light[5], light[6], light[7]);
 		fprintf(fileOutput, "%2.4f %2.4f %2.4f\n",m_fActivationTable[un_priority][2], m_fActivationTable[un_priority][0], m_fActivationTable[un_priority][1]);
 		fclose(fileOutput);
@@ -414,14 +429,15 @@ void CIri1Controller::Forage ( unsigned int un_priority )
 	double* groundMemory = m_seGroundMemory->GetSensorReading(m_pcEpuck);
 	
 	/* Leer Sensores de Luz */
-	double* light = m_seLight->GetSensorReading(m_pcEpuck);
+	double* light = m_seBlueLight->GetSensorReading(m_pcEpuck);
 	
 	/* If with a virtual puck */
-	if ( ( groundMemory[0] * fBattToForageInhibitor ) == 1.0 )
+	if ( groundMemory[0]  == 1.0 ) //removed inhibitor
 	{
 		/* Set Leds to BLUE */
-		m_pcEpuck->SetAllColoredLeds(	LED_COLOR_BLUE);
+		m_pcEpuck->SetAllColoredLeds(LED_COLOR_BLUE);
 		
+		fForageToWashInhibitor= 0.0;
 		/* Go oposite to the light */
 		if ( ( light[3] * light[4] == 0.0 ) )
 		{
@@ -446,7 +462,7 @@ void CIri1Controller::Forage ( unsigned int un_priority )
 	{
 		/* INIT WRITE TO FILE */
 		FILE* fileOutput = fopen("outputFiles/forageOutput", "a");
-		fprintf(fileOutput, "%2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f ", m_fTime, fBattToForageInhibitor, groundMemory[0], light[0], light[1], light[2], light[3], light[4], light[5], light[6], light[7]);
+		fprintf(fileOutput, "%2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f ", m_fTime, fForageToWashInhibitor, groundMemory[0], light[0], light[1], light[2], light[3], light[4], light[5], light[6], light[7]);
 		fprintf(fileOutput, "%2.4f %2.4f %2.4f\n",m_fActivationTable[un_priority][2], m_fActivationTable[un_priority][0], m_fActivationTable[un_priority][1]);
 		fclose(fileOutput);
 		/* END WRITE TO FILE */

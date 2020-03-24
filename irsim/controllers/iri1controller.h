@@ -26,6 +26,7 @@ private:
     	CEpuckProximitySensor* m_seProx;
 		CLightSensor* m_seLight;
 		CRealRedLightSensor* m_seRedLight;
+		CRealBlueLightSensor* m_seBlueLight;
 		CContactSensor* m_seContact;
 		CGroundSensor* m_seGround;
 		CGroundMemorySensor* m_seGroundMemory;
@@ -38,7 +39,7 @@ private:
 		double**	m_fActivationTable;
 		int 			m_nWriteToFile;
 		double 		m_fTime;
-    	double fBattToForageInhibitor; //TO-DO write down some other inhibitors
+    	double fForageToWashInhibitor; //TO-DO write down some other inhibitors
 		double fWashToGymInhibitor; //Added new inhibitor
 		
 		/* Functions */
@@ -49,7 +50,7 @@ private:
 		void ObstacleAvoidance ( unsigned int un_priority );
 		void Navigate ( unsigned int un_priority );
 		void GoLoadWash ( unsigned int un_priority );
-		void GoLoadGym ( unsigned int un_priority );
+		void NavigateGym ( unsigned int un_priority );
 		void Forage ( unsigned int un_priority );
 };
 
