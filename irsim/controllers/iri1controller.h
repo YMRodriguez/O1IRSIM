@@ -48,10 +48,11 @@ private:
 		void Coordinator ( void );
 
 		void ObstacleAvoidance ( unsigned int un_priority );
-		void Navigate ( unsigned int un_priority );
-		void GoLoadWash ( unsigned int un_priority );
-		void NavigateGym ( unsigned int un_priority );
 		void Forage ( unsigned int un_priority );
+		void GoLoadWash ( unsigned int un_priority );
+		void Navigate ( unsigned int un_priority );
+		void NavigateGym ( unsigned int un_priority );
+		
 };
 
 #endif
