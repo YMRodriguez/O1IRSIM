@@ -50,7 +50,7 @@ using namespace std;
 /* Threshold to avoid obstacles */
 #define PROXIMITY_THRESHOLD 0.7
 /* Threshold to define the battery discharged */
-#define BATTERY_WASH_THRESHOLD 0.4
+#define BATTERY_WASH_THRESHOLD 0.25
 /* Threshold to reduce the speed of the robot */
 #define NAVIGATE_GYM_THRESHOLD 0.2
 #define NAVIGATE_THRESHOLD 0.5
@@ -89,9 +89,13 @@ CIri1Controller::CIri1Controller (const char* pch_name, CEpuck* pc_epuck, int n_
 	/* Set red battery Sensor */
 	m_seRedBattery = (CRedBatterySensor*) m_pcEpuck->GetSensor (SENSOR_RED_BATTERY);
 
-	
-  fForageToWashInhibitor = 1.0;
-  fWashToGymInhibitor = 1.0;
+   /*Initialize Blue Light max value*/
+   fMaxBlueLight = 0.0;
+
+   /*Initialize inhibitors*/
+   fForageToWashInhibitor = 1.0;
+   fWashToGymInhibitor = 1.0;
+
 	/* Initilize Variables */
 	m_fLeftSpeed = 0.0;
 	m_fRightSpeed = 0.0;
@@ -122,6 +126,7 @@ void CIri1Controller::SimulationStep(unsigned n_step_number, double f_time, doub
 {
 	/* Move time to global variable, so it can be used by the bahaviors to write to files*/
 	m_fTime = f_time;
+    
 
 	/* Execute the levels of competence */
 	ExecuteBehaviors();
@@ -167,8 +172,8 @@ void CIri1Controller::ExecuteBehaviors ( void )
 	m_pcEpuck->SetAllColoredLeds(LED_COLOR_YELLOW);
 	
 	ObstacleAvoidance ( AVOID_PRIORITY );
-	GoLoadWash ( RELOAD_PRIORITY_WASH);
 	Forage ( FORAGE_PRIORITY );
+	GoLoadWash ( RELOAD_PRIORITY_WASH);
 	NavigateGym ( NAVIGATE_PRIORITY_GYM);
 	Navigate ( NAVIGATE_PRIORITY );
 }
@@ -281,7 +286,6 @@ void CIri1Controller::Navigate ( unsigned int un_priority )
 	double* blueLight = m_seBlueLight->GetSensorReading(m_pcEpuck);
 	double fTotalBlueLight = 0.0;
 	double fTotalRedLight = 0.0;
-	double fMaxBlueLight = 0.0;
 
 	for ( int i = 0 ; i < m_seBlueLight->GetNumberOfInputs() ; i ++ )
 	{
@@ -290,7 +294,7 @@ void CIri1Controller::Navigate ( unsigned int un_priority )
 	}
 
 	/* Actualizamos el valor maximo de la luz azul*/
-	if(fMaxBlueLight<fTotalBlueLight){
+	if( fMaxBlueLight < fTotalBlueLight ){
 		fMaxBlueLight = fTotalBlueLight;
 	}
 
@@ -306,24 +310,25 @@ void CIri1Controller::Navigate ( unsigned int un_priority )
 	/* DEBUG */
 	/* Leer Battery Sensores */
 	printf("fTotalBlueLight: %2f\n",fTotalBlueLight);
+	printf("fMaxBlueLight: %2f\n",fMaxBlueLight);
 	printf("fTotalRedLight: %2f\n",fTotalRedLight);
 	printf("GroundMemorySensor: %2f\n",groundMemory[0]);
 	/* DEBUG */
 
 	
 	/* If not in black area */
-	if ( groundMemory[0]  == 0.0 ) //removed inhibitor
+	if ( (groundMemory[0]  == 0.0) && (fTotalBlueLight < fMaxBlueLight) )
 	{
-		
-	
-		/* Go oposite to the light */  //( redLight[0] * redLight[6] != 0.0 )
-		if ( fTotalBlueLight < fMaxBlueLight )
-		{
+		/* Go oposite to the light */  
 			m_fActivationTable[un_priority][2] = 1.0;
+			/*DEBUG*/
 			printf("VOY OPUESTO A LA LUZ[NAVIGATE] \n");
-			double lightLeft 	= redLight[0] + redLight[1] + redLight[2] + redLight[3];
-			double lightRight = redLight[4] + redLight[5] + redLight[6] + redLight[7];
 			m_pcEpuck->SetAllColoredLeds(LED_COLOR_BLACK);
+			/*DEBUG*/
+
+			double lightLeft = blueLight[0] + blueLight[1] + blueLight[2] + blueLight[3];
+			double lightRight = blueLight[4] + blueLight[5] + blueLight[6] + blueLight[7];
+			
 			if ( lightLeft > lightRight )
 			{
 				m_fActivationTable[un_priority][0] = SPEED;
@@ -334,7 +339,7 @@ void CIri1Controller::Navigate ( unsigned int un_priority )
 				m_fActivationTable[un_priority][0] = -SPEED;
 				m_fActivationTable[un_priority][1] = SPEED;
 			}
-		}
+		
 	}else {
 		if( fTotalBlueLight >= NAVIGATE_THRESHOLD ){
 		m_fActivationTable[un_priority][0] = SPEED/4;
@@ -377,7 +382,7 @@ void CIri1Controller::NavigateGym ( unsigned int un_priority )
 	}
 	
 	/* DEBUG */
-	/* Leer Battery Sensores */
+	/* Leer Luz Total */
 	printf("fTotalLight: %2f\n",fTotalLight);
 	/* DEBUG */
 	
@@ -442,7 +447,7 @@ void CIri1Controller::GoLoadWash ( unsigned int un_priority )
 
 			double lightLeft 	= light[0] + light[1] + light[2] + light[3];
 			double lightRight = light[4] + light[5] + light[6] + light[7];
-			
+
 			if ( lightLeft > lightRight )
 			{
 				m_fActivationTable[un_priority][0] = -SPEED;

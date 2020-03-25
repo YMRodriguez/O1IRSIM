@@ -126,13 +126,13 @@ void CLightObject::Reset ( void )
 
 int CLightObject::GetTiming ( unsigned int n_step_number )
 {
-  if ( (n_step_number % 300) == 0 )
+  if ( (n_step_number % 500) == 0 )
   m_nActivation = true;
 
   printf("Act: Yellow: %d\n", m_nActivation);
 
 	/* Create sequence */
-  if ( !(n_step_number % 400) )
+  if ( !(n_step_number % 600) )
   {
     /* toggle light */
     m_nActivation ^= 0x1;
