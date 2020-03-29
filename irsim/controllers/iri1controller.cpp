@@ -103,7 +103,7 @@ CIri1Controller::CIri1Controller (const char* pch_name, CEpuck* pc_epuck, int n_
 	m_fActivationTable = new double* [BEHAVIORS];
 	for ( int i = 0 ; i < BEHAVIORS ; i++ )
 	{
-		m_fActivationTable[i] = new double[4];
+		m_fActivationTable[i] = new double[3];
 	}
 }
 
@@ -297,12 +297,6 @@ void CIri1Controller::Navigate ( unsigned int un_priority )
 	if( fMaxBlueLight < fTotalBlueLight ){
 		fMaxBlueLight = fTotalBlueLight;
 	}
-
-	for ( int i = 0 ; i < m_seRedLight->GetNumberOfInputs() ; i ++ )
-	{
-		fTotalRedLight += redLight[i];
-
-	}
 	
 	/* Leer Sensores de Suelo Memory */
 	double* groundMemory = m_seGroundMemory->GetSensorReading(m_pcEpuck);
@@ -317,10 +311,9 @@ void CIri1Controller::Navigate ( unsigned int un_priority )
 
 	
 	/* If not in black area */
-	if ( (groundMemory[0]  == 0.0) && (fTotalBlueLight < fMaxBlueLight) )
+	if ( (groundMemory[0]  == 0.0) && (blueLight[0]*blueLight[7]==0) )//&& (fTotalBlueLight < fMaxBlueLight) )
 	{
 		/* Go oposite to the light */  
-			m_fActivationTable[un_priority][2] = 1.0;
 			/*DEBUG*/
 			printf("VOY OPUESTO A LA LUZ[NAVIGATE] \n");
 			m_pcEpuck->SetAllColoredLeds(LED_COLOR_BLACK);
@@ -341,18 +334,11 @@ void CIri1Controller::Navigate ( unsigned int un_priority )
 			}
 		
 	}else {
-		if( fTotalBlueLight >= NAVIGATE_THRESHOLD ){
-		m_fActivationTable[un_priority][0] = SPEED/4;
-		m_fActivationTable[un_priority][1] = SPEED/4;
-		}
-		else
-		{
 		m_fActivationTable[un_priority][0] = SPEED;
 		m_fActivationTable[un_priority][1] = SPEED;
-		}
-		m_fActivationTable[un_priority][2] = 1.0;
 	}
-	
+
+	m_fActivationTable[un_priority][2] = 1.0;
 	
 	if (m_nWriteToFile ) 
 	{
@@ -389,21 +375,16 @@ void CIri1Controller::NavigateGym ( unsigned int un_priority )
 	if ( tmp[0]*fWashToGymInhibitor > NAVIGATE_GYM_THRESHOLD )
 	{
 		tmp[0] = 2 * NAVIGATE_GYM_THRESHOLD - tmp[0];
-		m_fActivationTable[un_priority][0] =	SPEED*(0.65 + tmp[0]);
-		//m_fActivationTable[un_priority][0] = SPEED/4;
-		//m_fActivationTable[un_priority][1] = SPEED/4;
-	}else if(tmp[1]*fWashToGymInhibitor > NAVIGATE_GYM_THRESHOLD){
+		m_fActivationTable[un_priority][0] =  SPEED*(0.65 + tmp[0]);
+		m_fActivationTable[un_priority][2] = 1.0;
+	} 
+	if(tmp[1]*fWashToGymInhibitor > NAVIGATE_GYM_THRESHOLD){
 		tmp[1] = 2 * NAVIGATE_GYM_THRESHOLD - tmp[1];
 		m_fActivationTable[un_priority][1] =  SPEED*(0.6 + tmp[1]);
-	}
-	else
-	{
-		m_fActivationTable[un_priority][0] = SPEED;
-		m_fActivationTable[un_priority][1] = SPEED;
+		m_fActivationTable[un_priority][2] = 1.0;
 	}
 	
-	m_fActivationTable[un_priority][2] = 1.0;
-
+	
 	if (m_nWriteToFile ) 
 	{
 		/* INIT: WRITE TO FILES */
@@ -497,7 +478,7 @@ void CIri1Controller::Forage ( unsigned int un_priority )
 		/* DEBUG */
 
 		/* Go oposite to the light */
-		if ( ( blueLight[3] * blueLight[4] == 0.0 ) )
+		if ( blueLight[3] * blueLight[4] == 0.0 ) 
 		{
 			m_fActivationTable[un_priority][2] = 1.0;
 
