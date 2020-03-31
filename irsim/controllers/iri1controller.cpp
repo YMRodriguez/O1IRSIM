@@ -48,7 +48,7 @@ using namespace std;
 #define NAVIGATE_PRIORITY 4
 
 /* Threshold to avoid obstacles */
-#define PROXIMITY_THRESHOLD 0.7
+#define PROXIMITY_THRESHOLD 0.8
 /* Threshold to define the battery discharged */
 #define BATTERY_WASH_THRESHOLD 0.25
 /* Threshold to reduce the speed of the robot */
@@ -94,11 +94,13 @@ CIri1Controller::CIri1Controller (const char* pch_name, CEpuck* pc_epuck, int n_
 
    /*Initialize inhibitors*/
    fForageToWashInhibitor = 1.0;
-   fWashToGymInhibitor = 1.0;
+   fWashToNavigateInhibitor = 1.0;
 
+	justStopped = 0;
 	/* Initilize Variables */
 	m_fLeftSpeed = 0.0;
 	m_fRightSpeed = 0.0;
+
 
 	m_fActivationTable = new double* [BEHAVIORS];
 	for ( int i = 0 ; i < BEHAVIORS ; i++ )
@@ -127,6 +129,7 @@ void CIri1Controller::SimulationStep(unsigned n_step_number, double f_time, doub
 	/* Move time to global variable, so it can be used by the bahaviors to write to files*/
 	m_fTime = f_time;
     
+	
 
 	/* Execute the levels of competence */
 	ExecuteBehaviors();
@@ -166,7 +169,7 @@ void CIri1Controller::ExecuteBehaviors ( void )
 
 	/* Release Inhibitors */
 	fForageToWashInhibitor = 1.0;
-	fWashToGymInhibitor = 1.0;
+	fWashToNavigateInhibitor = 1.0;
 
 	/* Set Leds to BLACK */
 	m_pcEpuck->SetAllColoredLeds(LED_COLOR_YELLOW);
@@ -242,12 +245,18 @@ void CIri1Controller::ObstacleAvoidance ( unsigned int un_priority )
 	while ( fRepelent > M_PI ) fRepelent -= 2 * M_PI;
 	while ( fRepelent < -M_PI ) fRepelent += 2 * M_PI;
 
+	printf("fMaxProx: %2f\n",fMaxProx);
+
 	/* If above a threshold */
 	if ( fMaxProx > PROXIMITY_THRESHOLD )
 	{
+		/* Increase time it has collapsed*/
+		if(m_fActivationTable[FORAGE_PRIORITY][2] != 1.0){justStopped += 1;}
+		printf("JustStoppedAVOIDPost: %2i\n",justStopped);
+
 		/* Set Leds to GREEN */
 		m_pcEpuck->SetAllColoredLeds(LED_COLOR_GREEN);
-
+		
 
 		double fCLinear = 1.0;
 		double fCAngular = 1.0;
@@ -301,39 +310,46 @@ void CIri1Controller::Navigate ( unsigned int un_priority )
 	/* Leer Sensores de Suelo Memory */
 	double* groundMemory = m_seGroundMemory->GetSensorReading(m_pcEpuck);
 
+	/* Leer Sensores de Suelo*/
+	double* ground = m_seGround->GetSensorReading(m_pcEpuck);
+
 	/* DEBUG */
 	/* Leer Battery Sensores */
 	printf("fTotalBlueLight: %2f\n",fTotalBlueLight);
 	printf("fMaxBlueLight: %2f\n",fMaxBlueLight);
 	printf("fTotalRedLight: %2f\n",fTotalRedLight);
 	printf("GroundMemorySensor: %2f\n",groundMemory[0]);
+	printf("GroundSensor: %2f\n",ground[0]);
+	printf("JustStopped: %2i\n",justStopped);
 	/* DEBUG */
 
 	
-	/* If not in black area */
-	if ( (groundMemory[0]  == 0.0) && (blueLight[0]*blueLight[7]==0) )//&& (fTotalBlueLight < fMaxBlueLight) )
+	/* If not in black area and not pointing to the light */
+	if ( (ground[0]==1 && groundMemory[0]==0) && justStopped==0 && (blueLight[0]*blueLight[7]==0) && fWashToNavigateInhibitor )//&& (fTotalBlueLight < fMaxBlueLight) )
 	{
-		/* Go oposite to the light */  
+		/* Go for the light */  
 			/*DEBUG*/
-			printf("VOY OPUESTO A LA LUZ[NAVIGATE] \n");
+			printf("VOY A POR LA LUZ[NAVIGATE] \n");
 			m_pcEpuck->SetAllColoredLeds(LED_COLOR_BLACK);
 			/*DEBUG*/
 
+			if(justStopped > 0) {justStopped= justStopped-1;}
 			double lightLeft = blueLight[0] + blueLight[1] + blueLight[2] + blueLight[3];
 			double lightRight = blueLight[4] + blueLight[5] + blueLight[6] + blueLight[7];
 			
 			if ( lightLeft > lightRight )
 			{
-				m_fActivationTable[un_priority][0] = SPEED;
-				m_fActivationTable[un_priority][1] = -SPEED;
-			}
-			else
-			{
 				m_fActivationTable[un_priority][0] = -SPEED;
 				m_fActivationTable[un_priority][1] = SPEED;
 			}
+			else
+			{
+				m_fActivationTable[un_priority][0] = SPEED;
+				m_fActivationTable[un_priority][1] = -SPEED;
+			}
 		
-	}else {
+	}else{
+		if((justStopped > 0) && (m_fActivationTable[AVOID_PRIORITY][2]!=1.0)) {justStopped= justStopped-1;}
 		m_fActivationTable[un_priority][0] = SPEED;
 		m_fActivationTable[un_priority][1] = SPEED;
 	}
@@ -372,13 +388,13 @@ void CIri1Controller::NavigateGym ( unsigned int un_priority )
 	printf("fTotalLight: %2f\n",fTotalLight);
 	/* DEBUG */
 	
-	if ( tmp[0]*fWashToGymInhibitor > NAVIGATE_GYM_THRESHOLD )
+	if ( tmp[0]*fWashToNavigateInhibitor > NAVIGATE_GYM_THRESHOLD )
 	{
 		tmp[0] = 2 * NAVIGATE_GYM_THRESHOLD - tmp[0];
 		m_fActivationTable[un_priority][0] =  SPEED*(0.65 + tmp[0]);
 		m_fActivationTable[un_priority][2] = 1.0;
 	} 
-	if(tmp[1]*fWashToGymInhibitor > NAVIGATE_GYM_THRESHOLD){
+	if(tmp[1]*fWashToNavigateInhibitor > NAVIGATE_GYM_THRESHOLD){
 		tmp[1] = 2 * NAVIGATE_GYM_THRESHOLD - tmp[1];
 		m_fActivationTable[un_priority][1] =  SPEED*(0.6 + tmp[1]);
 		m_fActivationTable[un_priority][2] = 1.0;
@@ -420,7 +436,7 @@ void CIri1Controller::GoLoadWash ( unsigned int un_priority )
 		m_pcEpuck->SetAllColoredLeds(LED_COLOR_RED);
 		
 
-		fWashToGymInhibitor = 0.0; 
+		fWashToNavigateInhibitor = 0.0; 
 		/* If not pointing to the light */
 		if ( ( light[0] * light[7] == 0.0 ) )
 		{
@@ -478,7 +494,7 @@ void CIri1Controller::Forage ( unsigned int un_priority )
 		/* DEBUG */
 
 		/* Go oposite to the light */
-		if ( blueLight[3] * blueLight[4] == 0.0 ) 
+		if ( (blueLight[2]+blueLight[3]) * (blueLight[4]+blueLight[5]) == 0.0 ) 
 		{
 			m_fActivationTable[un_priority][2] = 1.0;
 

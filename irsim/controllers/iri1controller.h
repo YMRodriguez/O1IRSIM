@@ -40,8 +40,9 @@ private:
 		int 			m_nWriteToFile;
 		double 		m_fTime;
 		double fMaxBlueLight;
-    	double fForageToWashInhibitor; //TO-DO write down some other inhibitors
-		double fWashToGymInhibitor; //Added new inhibitor
+    	double fForageToWashInhibitor; 
+		double fWashToNavigateInhibitor; 
+		int  justStopped;
 		
 		/* Functions */
 
