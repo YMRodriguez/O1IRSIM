@@ -42,6 +42,7 @@ private:
 		double fMaxBlueLight;
     	double fForageToWashInhibitor; 
 		double fWashToNavigateInhibitor; 
+		double fAvoidToNavigateCountInhibitor; 
 		int  justStopped;
 		
 		/* Functions */

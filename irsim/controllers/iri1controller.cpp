@@ -95,6 +95,8 @@ CIri1Controller::CIri1Controller (const char* pch_name, CEpuck* pc_epuck, int n_
    /*Initialize inhibitors*/
    fForageToWashInhibitor = 1.0;
    fWashToNavigateInhibitor = 1.0;
+   fAvoidToNavigateCountInhibitor = 1.0;
+
 
 	justStopped = 0;
 	/* Initilize Variables */
@@ -170,6 +172,8 @@ void CIri1Controller::ExecuteBehaviors ( void )
 	/* Release Inhibitors */
 	fForageToWashInhibitor = 1.0;
 	fWashToNavigateInhibitor = 1.0;
+	fAvoidToNavigateCountInhibitor = 1.0;
+
 
 	/* Set Leds to BLACK */
 	m_pcEpuck->SetAllColoredLeds(LED_COLOR_YELLOW);
@@ -271,6 +275,7 @@ void CIri1Controller::ObstacleAvoidance ( unsigned int un_priority )
 		m_fActivationTable[un_priority][0] = fVLinear - fC1 * fVAngular;
 		m_fActivationTable[un_priority][1] = fVLinear + fC1 * fVAngular;
 		m_fActivationTable[un_priority][2] = 1.0;
+		fAvoidToNavigateCountInhibitor = 0.0;
 	}
 	
 	if (m_nWriteToFile ) 
@@ -349,7 +354,7 @@ void CIri1Controller::Navigate ( unsigned int un_priority )
 			}
 		
 	}else{
-		if((justStopped > 0) && (m_fActivationTable[AVOID_PRIORITY][2]!=1.0)) {justStopped= justStopped-1;}
+		if((justStopped > 0) && /*fForageToWashInhibitor==1.0 &&*/  fAvoidToNavigateCountInhibitor==1.0) {justStopped= justStopped-1;}
 		m_fActivationTable[un_priority][0] = SPEED;
 		m_fActivationTable[un_priority][1] = SPEED;
 	}
