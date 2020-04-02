@@ -421,7 +421,7 @@ void CIri1Controller::GoLoadWash(unsigned int un_priority)
 	double *battery = m_seRedBattery->GetSensorReading(m_pcEpuck);
 
 	/* Leer Sensores de Luz */
-	double *light = m_seRedLight->GetSensorReading(m_pcEpuck);
+	double *redLight = m_seRedLight->GetSensorReading(m_pcEpuck);
 
 	/* DEBUG */
 	/* Leer Red Battery Sensores de Suelo Memory */
@@ -436,14 +436,14 @@ void CIri1Controller::GoLoadWash(unsigned int un_priority)
 
 		fWashToNavigateInhibitor = 0.0;
 		/* If not pointing to the light */
-		if ((light[0] * light[7] == 0.0))
+		if ((redLight[0] * redLight[7] == 0.0))
 		{
 			m_fActivationTable[un_priority][2] = 1.0;
 
-			double lightLeft = light[0] + light[1] + light[2] + light[3];
-			double lightRight = light[4] + light[5] + light[6] + light[7];
+			double redLightLeft = redLight[0] + redLight[1] + redLight[2] + redLight[3];
+			double redLightRight = redLight[4] + redLight[5] + redLight[6] + redLight[7];
 
-			if (lightLeft > lightRight)
+			if (redLightLeft > redLightRight)
 			{
 				m_fActivationTable[un_priority][0] = -SPEED;
 				m_fActivationTable[un_priority][1] = SPEED;
@@ -460,7 +460,7 @@ void CIri1Controller::GoLoadWash(unsigned int un_priority)
 	{
 		/* INIT WRITE TO FILE */
 		FILE *fileOutput = fopen("outputFiles/redbatteryOutput", "a");
-		fprintf(fileOutput, "%2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f ", m_fTime, battery[0], light[0], light[1], light[2], light[3], light[4], light[5], light[6], light[7]);
+		fprintf(fileOutput, "%2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f %2.4f ", m_fTime, battery[0], redLight[0], redLight[1], redLight[2], redLight[3], redLight[4], redLight[5], redLight[6], redLight[7]);
 		fprintf(fileOutput, "%2.4f %2.4f %2.4f\n", m_fActivationTable[un_priority][2], m_fActivationTable[un_priority][0], m_fActivationTable[un_priority][1]);
 		fclose(fileOutput);
 		/* END WRITE TO FILE */
