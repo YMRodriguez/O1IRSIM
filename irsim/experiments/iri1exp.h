@@ -35,6 +35,9 @@ private:
 		int m_nNumberOfLightObject;
 		dVector2 *m_pcvLightObjects;
 
+		int m_nBlueLightObjectNumber;
+		dVector2 *m_pcvBlueLightObjects;
+
 		int m_nRedLightObjectNumber;
 		dVector2 *m_pcvRedLightObjects;
 
@@ -46,11 +49,8 @@ private:
 
 		/* Sensors */
 		float m_fLightSensorRange;
+		float m_fBlueLightSensorRange;
 		float m_fRedLightSensorRange;
-		
-		double m_fBatterySensorRange;
-		double m_fBatteryChargeCoef;
-		double m_fBatteryDischargeCoef;
 
 		double m_fRedBatterySensorRange;
 		double m_fRedBatteryChargeCoef;

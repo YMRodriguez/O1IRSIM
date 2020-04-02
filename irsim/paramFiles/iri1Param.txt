@@ -15,7 +15,10 @@ RUN TIME													= 10000
 
 NUMBER OF LIGHT OBJECTS  						= 1
 LIGHT 1 X POSITION (meters) 				= -1
-LIGHT 1 Y POSITION (meters)					= -0.8
+LIGHT 1 Y POSITION (meters)					= -0.9
+NUMBER OF BLUE LIGHT OBJECTS 							= 1
+BLUE LIGHT 1: X POSITION									= 1.2
+BLUE LIGHT 1: Y POSITION									= 1.2
 NUMBER OF RED LIGHT OBJECTS 							= 1
 RED LIGHT 1: X POSITION										= -0.7
 RED LIGHT 1: Y POSITION										= -1.2
@@ -34,11 +37,9 @@ GROUND AREA 2 COLOR (0.0 Black, 0.5 Grey)		= 0.5
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 LIGHT SENSOR RANGE (meters)				= 0.5
-RED LIGHT SENSOR RANGE (meters)				= 4.0
-BATTERY SENSOR RANGE (meters)			= 0.5
-BATTERY CHARGE COEF 							= 0.01
-BATTERY DISCHARGE COEF						= 0.0001
-RED BATTERY SENSOR RANGE (meters)			= 0.1
-RED BATTERY CHARGE COEF 							= 0.01
-RED BATTERY DISCHARGE COEF						= 0.0001
+RED LIGHT SENSOR RANGE (meters)				= 3.0
+BLUE LIGHT SENSOR RANGE (meters)			= 4.0
+RED BATTERY SENSOR RANGE (meters)			= 0.2
+RED BATTERY CHARGE COEF 							= 0.05
+RED BATTERY DISCHARGE COEF						= 0.0003
 ODOMETRY ERROR                        = 0.0

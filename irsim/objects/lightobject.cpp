@@ -126,17 +126,15 @@ void CLightObject::Reset ( void )
 
 int CLightObject::GetTiming ( unsigned int n_step_number )
 {
-  //if ( (n_step_number % 400) == 0 )
-  //m_nActivation = true;
-
-  //printf("Act: Yellow: %d\n", m_nActivation);
+  if ( (n_step_number % 400) == 0 )
+  m_nActivation = true;
 
 	/* Create sequence */
-  //if ( !(n_step_number % 500) )
-  //{
-    ///* toggle light */
-    //m_nActivation ^= 0x1;
-  //}
+  if ( !(n_step_number % 600) )
+  {
+    /* toggle light */
+    m_nActivation ^= 0x1;
+  }
 
 	/* default return true */
 	return m_nActivation;

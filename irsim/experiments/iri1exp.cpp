@@ -22,9 +22,9 @@
 #include "reallightsensor.h"
 #include "lightsensor.h"
 #include "realredlightsensor.h"
+#include "realbluelightsensor.h"
 #include "groundsensor.h"
 #include "groundmemorysensor.h"
-#include "batterysensor.h"
 #include "redbatterysensor.h"
 
 /******************** Actuators ****************/
@@ -37,47 +37,47 @@ using namespace std;
 
 /*Create Arena */
 static char* pchHeightMap = 
-"%%%%%%%%%%%%%%%%%%%%"
-"%#########%#######%%"
+//"%%%%%%%%%%%%%%%%%%%%"
+//"%#########%#######%%"
+//"%#############%####%"
+//"%#############%####%"
+//"%#########%#####%##%"
+//"%###############%##%"
+//"%#####%%###########%"
+//"%#########%########%"
+//"%#########%####%%##%"
+//"%##%%#############%%"
+//"%#############%%###%"
+//"%#####%###%####%###%"
+//"%##############%###%"
+//"%%#######%%####%###%"
+//"%##%%##############%"
+//"%######%%####%####%%"
+//"%#######%##########%"
+//"%##%####%%#########%"
+//"%##################%"
+//"%%%%%%%%%%%%%%%%%%%%";
+
+"%%%%%%%%%%%%%%%%%%%%" //Mapa con casa
+"%######%##%#######%%"
 "%#############%####%"
 "%#############%####%"
-"%#########%#####%##%"
-"%###############%##%"
-"%#####%%###########%"
-"%#########%########%"
-"%#########%####%%##%"
-"%##%%#############%%"
+"%####%####%#####%##%"
+"%###%###########%##%"
+"%##%#########%#####%"
+"%#####%###%########%"
+"%#########%%###%%##%"
+"%##%%##############%"
 "%#############%%###%"
-"%#####%###%####%###%"
+"%####%%###%####%###%"
 "%##############%###%"
-"%%#######%%####%###%"
+"%########%%####%###%"
 "%##%%##############%"
 "%######%%####%####%%"
 "%#######%##########%"
 "%##%####%%#########%"
 "%##################%"
 "%%%%%%%%%%%%%%%%%%%%";
-
-//"%%%%%%%%%%%%%%%%%%%%"
-//"%##################%"
-//"%##################%"
-//"%##########%#######%"
-//"%##########%#######%"
-//"%#%%%######%#######%"
-//"%############%%%###%"
-//"%##################%"
-//"%##########%#######%"
-//"%###########%%%%%##%"
-//"%##################%"
-//"%%%%%%#############%"
-//"%##################%"
-//"%##################%"
-//"%#####%%###########%"
-//"%#####%%###########%"
-//"%##################%"
-//"%##################%"
-//"%##################%"
-//"%%%%%%%%%%%%%%%%%%%%";
 
 
 extern gsl_rng* rng;
@@ -109,6 +109,12 @@ CIri1Exp::CIri1Exp(const char* pch_name, const char* paramsFile) :
 
 		m_nNumberOfLightObject = 0;
 		m_pcvLightObjects = new dVector2[m_nNumberOfLightObject];
+
+		m_nRedLightObjectNumber = 0;
+		m_pcvRedLightObjects = new dVector2[m_nRedLightObjectNumber];
+
+		m_nBlueLightObjectNumber = 0;
+		m_pcvBlueLightObjects = new dVector2[m_nBlueLightObjectNumber];
 	
 		m_nNumberOfGroundArea = 0;
 		m_vGroundAreaCenter = new dVector2[m_nNumberOfGroundArea];
@@ -158,6 +164,19 @@ CIri1Exp::CIri1Exp(const char* pch_name, const char* paramsFile) :
 			/* Get Y Position */
 			m_pcvLightObjects[i].y = getDouble('=',pfile);
 		}
+		
+		/* Blue Lights */
+		/* Get Blue Light Objects Number */
+		m_nBlueLightObjectNumber = getInt('=',pfile);
+		/* Create Objects */
+		m_pcvBlueLightObjects = new dVector2[m_nBlueLightObjectNumber];
+		for ( int i = 0 ; i < m_nBlueLightObjectNumber; i++){
+			/* Get X position */
+			m_pcvBlueLightObjects[i].x = getDouble('=',pfile);
+			/* Get Y Position */
+			m_pcvBlueLightObjects[i].y = getDouble('=',pfile);
+		}
+
 		/* Red Lights */
 		/* Get Red Light Objects Number */
 		m_nRedLightObjectNumber = getInt('=',pfile);
@@ -190,18 +209,13 @@ CIri1Exp::CIri1Exp(const char* pch_name, const char* paramsFile) :
 		
 		/* SENSORS */
 		/* Get Light Range */
-
 		m_fLightSensorRange = getDouble('=',pfile); 
 		
 		/* Get Red Light Range */
 		m_fRedLightSensorRange = getDouble('=',pfile);
-		
-		/* Get Battery load range */
-		m_fBatterySensorRange = getDouble('=',pfile);
-		/* Get batttery charge coef */
-		m_fBatteryChargeCoef = getDouble('=',pfile);
-		/* Get batttery charge coef */
-		m_fBatteryDischargeCoef = getDouble('=',pfile);
+
+		/* Get Blue Light Range */
+		m_fBlueLightSensorRange = getDouble('=',pfile);
 
 		/* Get Red Battery load range */
 		m_fRedBatterySensorRange = getDouble('=',pfile);
@@ -220,6 +234,7 @@ CIri1Exp::~CIri1Exp ( void )
 {
 	delete [] m_pcvLightObjects;
 	delete [] m_pcvRedLightObjects;
+	delete [] m_pcvBlueLightObjects;
 	delete [] m_vGroundAreaCenter;
 	delete [] m_fGroundAreaExternalRadius;
 	delete [] m_fGroundAreaInternalRadius;
@@ -238,11 +253,22 @@ CArena* CIri1Exp::CreateArena()
 	/* Create and add Light Object */
 	char pchTemp[128];
 	CLightObject* pcLightObject = NULL;
+	unsigned int lightSequence = 200;
 	for( int i = 0 ; i < m_nNumberOfLightObject ; i++){
 		sprintf(pchTemp, "LightObject%d", i);
 		CLightObject* pcLightObject = new CLightObject (pchTemp);
 		pcLightObject->SetCenter(m_pcvLightObjects[i]);
+		pcLightObject->GetTiming(lightSequence);
 		pcArena->AddLightObject(pcLightObject);
+	}
+
+	/* Create and add Blue Light Object */
+	CBlueLightObject* pcBlueLightObject = NULL;
+	for( int i = 0 ; i < m_nBlueLightObjectNumber ; i++){
+		sprintf(pchTemp, "BlueLightObject%d", i);
+		CBlueLightObject* pcBlueLightObject = new CBlueLightObject (pchTemp);
+		pcBlueLightObject->SetCenter(m_pcvBlueLightObjects[i]);
+		pcArena->AddBlueLightObject(pcBlueLightObject);
 	}
 
 	/* Create and add Red Light Object */
@@ -303,6 +329,11 @@ void CIri1Exp::AddSensors(CEpuck* pc_epuck)
 	pcLightSensor = new CLightSensor("Light Sensor", m_fLightSensorRange);
 	pc_epuck->AddSensor(pcLightSensor);
 
+	//Blue Light Sensor
+	CSensor* pcBlueLightSensor = NULL;
+	pcBlueLightSensor = new CRealBlueLightSensor("Blue Light Sensor", m_fBlueLightSensorRange);
+	pc_epuck->AddSensor(pcBlueLightSensor);
+
 	//Red Light Sensor
 	CSensor* pcRedLightSensor = NULL;
 	pcRedLightSensor = new CRealRedLightSensor("Red Light Sensor", m_fRedLightSensorRange);
@@ -322,11 +353,6 @@ void CIri1Exp::AddSensors(CEpuck* pc_epuck)
 	CSensor* pcGroundMemorySensor = NULL;
 	pcGroundMemorySensor = new CGroundMemorySensor("Ground Memory Sensor");
 	pc_epuck->AddSensor(pcGroundMemorySensor);
-	
-	//Battery Sensor
-	CSensor* pcBatterySensor = NULL;
-	pcBatterySensor = new CBatterySensor("Battery Sensor", m_fBatterySensorRange, m_fBatteryChargeCoef, m_fBatteryDischargeCoef);
-	pc_epuck->AddSensor(pcBatterySensor);
 
 	//Red Battery Sensor
 	CSensor* pcRedBatterySensor = NULL;

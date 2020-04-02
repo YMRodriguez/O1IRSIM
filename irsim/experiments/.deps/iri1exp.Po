@@ -255,7 +255,7 @@ iri1exp.o: iri1exp.cpp /usr/include/stdc-predef.h \
  ../sensors/proxsensor.h ../actuators/wheelsactuator.h ../actuator.h \
  ../actuators/testwheel.h ../sensors/reallightsensor.h \
  ../sensors/lightsensor.h ../sensors/realredlightsensor.h \
- ../sensors/groundmemorysensor.h ../sensors/batterysensor.h \
+ ../sensors/realbluelightsensor.h ../sensors/groundmemorysensor.h \
  ../sensors/redbatterysensor.h ../controllers/iri1controller.h \
  ../controller.h
 
@@ -995,9 +995,9 @@ iri1exp.h:
 
 ../sensors/realredlightsensor.h:
 
-../sensors/groundmemorysensor.h:
+../sensors/realbluelightsensor.h:
 
-../sensors/batterysensor.h:
+../sensors/groundmemorysensor.h:
 
 ../sensors/redbatterysensor.h:
 
