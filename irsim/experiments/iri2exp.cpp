@@ -41,48 +41,45 @@ using namespace std;
 
 /*Create Arena */
 static char* pchHeightMap = 
-
-/*
-"%%%%%%%%%%%%%%%%%%%%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%##################%"
-"%%%%%%%%%%%%%%%%%%%%";
-*/
+//"%%%%%%%%%%%%%%%%%%%%"
+//"%############%#####%"
+//"%############%#####%"
+//"%##%%%%%%%%##%##%##%"
+//"%##%######%#####%##%"
+//"%##%######%#####%##%"
+//"%##%##%%%%%%%%%%%##%"
+//"%##%###############%"
+//"%##%###############%"
+//"%##%##%%%%%%%%#####%"
+//"%##%##%######%%%%%%%"
+//"%##%###############%"
+//"%##%#####%%########%"
+//"%##%%%%%%%%%%%#####%"
+//"%##%##%############%"
+//"%##%##%############%"
+//"%##%##%#####%%%%%##%"
+//"%#####%#########%##%"
+//"%#####%#########%##%"
+//"%%%%%%%%%%%%%%%%%%%%";
 
 "%%%%%%%%%%%%%%%%%%%%"
-"%######%##%#######%%"
-"%#############%####%"
-"%#############%####%"
-"%####%####%#####%##%"
-"%###%###########%##%"
-"%##%#########%#####%"
-"%#####%###%########%"
-"%#########%%###%%##%"
-"%##%%##############%"
-"%#############%%###%"
-"%####%%###%####%###%"
-"%##############%###%"
-"%########%%####%###%"
-"%##%%##############%"
-"%######%%####%####%%"
-"%#######%##########%"
-"%##%####%%#########%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
+"%##################%"
 "%##################%"
 "%%%%%%%%%%%%%%%%%%%%";
 
@@ -213,7 +210,6 @@ CIri2Exp::CIri2Exp(const char* pch_name, const char* paramsFile) :
 		}
 		
 		/* SENSORS */
-
 		/* Get Light Range */
 		m_fLightSensorRange = getDouble('=',pfile); 
 		
@@ -223,16 +219,28 @@ CIri2Exp::CIri2Exp(const char* pch_name, const char* paramsFile) :
 		/* Get Red Light Range */
 		m_fRedLightSensorRange = getDouble('=',pfile); 
 		
+		/* Get Battery load range */
+		m_fBatterySensorRange = getDouble('=',pfile);
+		/* Get batttery charge coef */
+		m_fBatteryChargeCoef = getDouble('=',pfile);
+		/* Get batttery charge coef */
+		m_fBatteryDischargeCoef = getDouble('=',pfile);
+		
+		/* Get Blue Battery load range */
+		m_fBlueBatterySensorRange = getDouble('=',pfile);
+		/* Get Blue batttery charge coef */
+		m_fBlueBatteryChargeCoef = getDouble('=',pfile);
+		/* Get Blue batttery charge coef */
+		m_fBlueBatteryDischargeCoef = getDouble('=',pfile);
+		
 		/* Get Red Battery load range */
 		m_fRedBatterySensorRange = getDouble('=',pfile);
-
 		/* Get Red batttery charge coef */
 		m_fRedBatteryChargeCoef = getDouble('=',pfile);
-
 		/* Get Red batttery charge coef */
 		m_fRedBatteryDischargeCoef = getDouble('=',pfile);
 		
-    	/* Get Encoder Sensor Error */
+    /* Get Encoder Sensor Error */
 		m_fEncoderSensorError = getDouble('=',pfile);
 	}
 }
@@ -264,12 +272,10 @@ CArena* CIri2Exp::CreateArena()
 	/* Create and add Light Object */
 	char pchTemp[128];
 	CLightObject* pcLightObject = NULL;
-	unsigned int lightSequence = 200;
 	for( int i = 0 ; i < m_nLightObjectNumber ; i++){
 		sprintf(pchTemp, "LightObject%d", i);
 		CLightObject* pcLightObject = new CLightObject (pchTemp);
 		pcLightObject->SetCenter(m_pcvLightObjects[i]);
-		pcLightObject->GetTiming(lightSequence);
 		pcArena->AddLightObject(pcLightObject);
 	}
 
@@ -329,7 +335,7 @@ void CIri2Exp::AddActuators(CEpuck* pc_epuck)
 
 void CIri2Exp::AddSensors(CEpuck* pc_epuck)
 {
-	
+	//
 	/* Create and add Proximity Sensor */
 	CSensor* pcProxSensor = NULL;
 	pcProxSensor = new CEpuckProximitySensor(252);
@@ -365,11 +371,30 @@ void CIri2Exp::AddSensors(CEpuck* pc_epuck)
 	pcGroundMemorySensor = new CGroundMemorySensor("Ground Memory Sensor");
 	pc_epuck->AddSensor(pcGroundMemorySensor);
 	
+	//Battery Sensor
+	CSensor* pcBatterySensor = NULL;
+	pcBatterySensor = new CBatterySensor("Battery Sensor", m_fBatterySensorRange, m_fBatteryChargeCoef, m_fBatteryDischargeCoef);
+	pc_epuck->AddSensor(pcBatterySensor);
+	
+	//Blue Battery Sensor
+	CSensor* pcBlueBatterySensor = NULL;
+	pcBlueBatterySensor = new CBlueBatterySensor("Battery Sensor", m_fBlueBatterySensorRange, m_fBlueBatteryChargeCoef, m_fBlueBatteryDischargeCoef);
+	pc_epuck->AddSensor(pcBlueBatterySensor);
+	
 	//Red Battery Sensor
 	CSensor* pcRedBatterySensor = NULL;
 	pcRedBatterySensor = new CRedBatterySensor("Battery Sensor", m_fRedBatterySensorRange, m_fRedBatteryChargeCoef, m_fRedBatteryDischargeCoef);
 	pc_epuck->AddSensor(pcRedBatterySensor);
 	
+  //Encoder Sensor 
+  CSensor* pcEncoderSensor = NULL;
+  pcEncoderSensor = new CEncoderSensor("Encoder Sensor", (CArena*) m_pcSimulator->GetArena(), m_fEncoderSensorError, pc_epuck->GetPosition().x, pc_epuck->GetPosition().y);
+  pc_epuck->AddSensor(pcEncoderSensor);
+  
+  //Compass Sensor
+  CSensor* pcCompassSensor = NULL;
+  pcCompassSensor = new CCompassSensor("compass", (CArena*) m_pcSimulator->GetArena());
+  pc_epuck->AddSensor(pcCompassSensor);
 
 }
 
