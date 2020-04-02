@@ -19,26 +19,46 @@ public:
     void SimulationStep(unsigned n_step_number, double f_time, double f_step_interval);
 
 private:
-    CEpuck* m_pcEpuck;
-    
+		/* ROBOT */
+    	CEpuck* m_pcEpuck;
+
+		/* SENSORS */
 		CWheelsActuator* m_acWheels;
-    CEpuckProximitySensor* m_seProx;
+    	CEpuckProximitySensor* m_seProx;
 		CRealLightSensor* m_seLight;
 		CRealBlueLightSensor* m_seBlueLight;
 		CRealRedLightSensor* m_seRedLight;
 		CContactSensor* m_seContact;
 		CGroundSensor* m_seGround;
-		CGroundMemorySensor* m_seGroundMemory;
-		CBatterySensor* m_seBattery;  
-		CBlueBatterySensor* m_seBlueBattery;  
+		CGroundMemorySensor* m_seGroundMemory;  
 		CRedBatterySensor* m_seRedBattery;  
-		CEncoderSensor* m_seEncoder;  
-		CCompassSensor* m_seCompass;  
+  
 
-    float m_fOrientation; 
-    dVector2 m_vPosition;
+		/* Global Variables */
+		double 		m_fLeftSpeed;
+		double 		m_fRightSpeed;
+		double**	m_fActivationTable;
+		double 		m_fTime;
+		double 		fForageToWashInhibitor;
+		double 		fWashToNavigateInhibitor;
+		double 		fAvoidToNavigateCountInhibitor;
+		int 		justStopped;
 
-		int m_nWriteToFile;
+		float 		m_fOrientation; 
+		dVector2 	m_vPosition;
+
+		int 		m_nWriteToFile;
+
+		/* Functions */
+
+		void ExecuteBehaviors ( void );
+		void Coordinator ( void );
+
+		void ObstacleAvoidance ( unsigned int un_priority );
+		void Navigate ( unsigned int un_priority );
+		void NavigateGym ( unsigned int un_priority );
+		void GoLoadWash ( unsigned int un_priority );
+		void Forage ( unsigned int un_priority );
 };
 
 #endif

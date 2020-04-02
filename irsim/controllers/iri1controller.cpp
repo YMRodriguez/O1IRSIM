@@ -81,9 +81,6 @@ CIri1Controller::CIri1Controller(const char *pch_name, CEpuck *pc_epuck, int n_w
 	/* Set red battery Sensor */
 	m_seRedBattery = (CRedBatterySensor *)m_pcEpuck->GetSensor(SENSOR_RED_BATTERY);
 
-	/* Initialize Blue Light max value*/
-	fMaxBlueLight = 0.0;
-
 	/* Initialize inhibitors*/
 	fForageToWashInhibitor = 1.0;
 	fWashToNavigateInhibitor = 1.0;
@@ -295,12 +292,6 @@ void CIri1Controller::Navigate(unsigned int un_priority)
 	for (int i = 0; i < m_seBlueLight->GetNumberOfInputs(); i++)
 	{
 		fTotalBlueLight += blueLight[i];
-	}
-
-	/* Update blue light max value */
-	if (fMaxBlueLight < fTotalBlueLight)
-	{
-		fMaxBlueLight = fTotalBlueLight;
 	}
 
 	/* Read ground memory sensor */

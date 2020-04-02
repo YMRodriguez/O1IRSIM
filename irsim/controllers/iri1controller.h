@@ -37,7 +37,6 @@ private:
 	double **m_fActivationTable;
 	int m_nWriteToFile;
 	double m_fTime;
-	double fMaxBlueLight;
 	double fForageToWashInhibitor;
 	double fWashToNavigateInhibitor;
 	double fAvoidToNavigateCountInhibitor;
