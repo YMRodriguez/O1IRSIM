@@ -52,10 +52,6 @@ private:
 		float m_fBlueLightSensorRange;
 		float m_fRedLightSensorRange;
 
-		double m_fBatterySensorRange;
-		double m_fBatteryChargeCoef;
-		double m_fBatteryDischargeCoef;
-
 		double m_fRedBatterySensorRange;
 		double m_fRedBatteryChargeCoef;
 		double m_fRedBatteryDischargeCoef;

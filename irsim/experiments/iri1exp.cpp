@@ -25,7 +25,6 @@
 #include "realbluelightsensor.h"
 #include "groundsensor.h"
 #include "groundmemorysensor.h"
-#include "batterysensor.h"
 #include "redbatterysensor.h"
 
 /******************** Actuators ****************/
@@ -216,14 +215,7 @@ CIri1Exp::CIri1Exp(const char* pch_name, const char* paramsFile) :
 		m_fRedLightSensorRange = getDouble('=',pfile);
 
 		/* Get Blue Light Range */
-		m_fBlueLightSensorRange = getDouble('=',pfile); 
-		
-		/* Get Battery load range */
-		m_fBatterySensorRange = getDouble('=',pfile);
-		/* Get batttery charge coef */
-		m_fBatteryChargeCoef = getDouble('=',pfile);
-		/* Get batttery charge coef */
-		m_fBatteryDischargeCoef = getDouble('=',pfile);
+		m_fBlueLightSensorRange = getDouble('=',pfile);
 
 		/* Get Red Battery load range */
 		m_fRedBatterySensorRange = getDouble('=',pfile);
@@ -361,11 +353,6 @@ void CIri1Exp::AddSensors(CEpuck* pc_epuck)
 	CSensor* pcGroundMemorySensor = NULL;
 	pcGroundMemorySensor = new CGroundMemorySensor("Ground Memory Sensor");
 	pc_epuck->AddSensor(pcGroundMemorySensor);
-	
-	//Battery Sensor
-	CSensor* pcBatterySensor = NULL;
-	pcBatterySensor = new CBatterySensor("Battery Sensor", m_fBatterySensorRange, m_fBatteryChargeCoef, m_fBatteryDischargeCoef);
-	pc_epuck->AddSensor(pcBatterySensor);
 
 	//Red Battery Sensor
 	CSensor* pcRedBatterySensor = NULL;

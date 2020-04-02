@@ -129,8 +129,6 @@ int CLightObject::GetTiming ( unsigned int n_step_number )
   if ( (n_step_number % 400) == 0 )
   m_nActivation = true;
 
-  printf("Act: Yellow: %d\n", m_nActivation);
-
 	/* Create sequence */
   if ( !(n_step_number % 600) )
   {
