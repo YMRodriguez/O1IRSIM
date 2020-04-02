@@ -437,6 +437,15 @@ void CIri2Controller::NavigateGym ( unsigned int un_priority )
 		m_fActivationTable[un_priority][2] = 1.0;
 		
 	}
+		if (m_nWriteToFile)
+	{
+		/* INIT: WRITE TO FILES */
+		/* Write level of competence ouputs */
+		FILE *fileOutput = fopen("outputFiles/navigateGymOutput", "a");
+		fprintf(fileOutput, "%2.4f %2.4f %2.4f %2.4f %2.4f\n", m_fTime, fTotalLight, m_fActivationTable[un_priority][2], m_fActivationTable[un_priority][0], m_fActivationTable[un_priority][1]);
+		fclose(fileOutput);
+		/* END WRITE TO FILES */
+	}
 }
 
 
