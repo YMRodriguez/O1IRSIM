@@ -241,10 +241,8 @@ iri2controller.o: iri2controller.cpp /usr/include/stdc-predef.h \
  ../arena.h ../sensors/contactsensor.h ../sensors/reallightsensor.h \
  ../sensors/realbluelightsensor.h ../sensors/realredlightsensor.h \
  ../sensors/groundsensor.h ../sensors/groundmemorysensor.h \
- ../sensors/batterysensor.h ../sensors/bluebatterysensor.h \
- ../sensors/redbatterysensor.h ../sensors/encodersensor.h ../random.h \
- ../sensors/compasssensor.h ../actuators/wheelsactuator.h ../actuator.h \
- iri2controller.h ../controller.h
+ ../sensors/redbatterysensor.h ../actuators/wheelsactuator.h \
+ ../actuator.h iri2controller.h ../controller.h
 
 /usr/include/stdc-predef.h:
 
@@ -936,17 +934,7 @@ iri2controller.o: iri2controller.cpp /usr/include/stdc-predef.h \
 
 ../sensors/groundmemorysensor.h:
 
-../sensors/batterysensor.h:
-
-../sensors/bluebatterysensor.h:
-
 ../sensors/redbatterysensor.h:
-
-../sensors/encodersensor.h:
-
-../random.h:
-
-../sensors/compasssensor.h:
 
 ../actuators/wheelsactuator.h:
 
